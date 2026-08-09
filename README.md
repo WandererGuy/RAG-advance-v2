@@ -47,7 +47,9 @@ curl localhost:8000/api/v1/health   # -> {"status":"ok","database":"up"}
 `make eval P=naive-v1` and `make report`. All commands run from the repository root; the Makefile
 handles the `cd backend`.
 
-Progress and per-phase verification evidence: [docs/progress.md](docs/progress.md).
+Progress index: [docs/progress.md](docs/progress.md) — phase status, what is blocked on a human,
+and a link to the per-phase entry in [docs/progress/](docs/progress/) holding the verification
+evidence.
 
 ## How the project is organised
 

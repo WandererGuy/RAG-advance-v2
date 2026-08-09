@@ -3,10 +3,12 @@
 Context file auto-loaded by Claude Code. Read all of it before doing anything.
 Build plan: `PLAN.md`. Phase → directory map: `docs/architecture.md`.
 
-> **Start here: `docs/progress.md`.** It records which phases are done, the evidence they passed
-> their Definition of Done, deviations from PLAN.md, and open items. **Phases 0 and 1 are complete;
-> Phase 2 (synchronous ingest) is next.** Section 3 below has been partly superseded — read it
-> together with `docs/adr/0002-tech-stack-resolution.md`.
+> **Start here: `docs/progress.md`.** It is a short index — the status of every phase, what is
+> blocked on a human, and a link to one file per phase in `docs/progress/` holding the evidence,
+> deviations and open items. **Phases 0 and 1 are complete; Phase 2 is built but not signed off
+> (its Definition of Done needs a human); Phase 3 is blocked on naming a golden-set author.**
+> Section 3 below has been partly superseded — read it together with
+> `docs/adr/0002-tech-stack-resolution.md`.
 
 ---
 
@@ -137,12 +139,12 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
 8. **Every number must be written to `results/*.json` and committed.** No verbal reporting.
 9. Commit per phase: `feat(phase-2): sync ingest pipeline`.
 10. Secrets live only in `.env` (already gitignored). `.env.example` is committed with empty values.
-11. **A phase is not finished until `docs/progress.md` has its entry.** Write it before the phase
-    commit and include it in that same commit. Four things, every time: what was built, the
-    command output proving the Definition of Done, deviations from PLAN.md and why, and open
-    items — especially anything blocked on a human. Rule 8 applies here too: the evidence goes in
-    the file, not only into the chat. The next session starts with this file and remembers
-    nothing else.
+11. **A phase is not finished until `docs/progress/phase-N.md` exists**, with its row added to the
+    `docs/progress.md` index. Write it before the phase commit and include it in that same commit.
+    Four things, every time: what was built, the command output proving the Definition of Done,
+    deviations from PLAN.md and why, and open items — especially anything blocked on a human.
+    Rule 8 applies here too: the evidence goes in the file, not only into the chat. The next
+    session starts with these files and remembers nothing else.
 
 ## 6. Code conventions
 
