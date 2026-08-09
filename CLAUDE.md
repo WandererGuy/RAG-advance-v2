@@ -3,6 +3,11 @@
 Context file auto-loaded by Claude Code. Read all of it before doing anything.
 Build plan: `PLAN.md`. Phase → directory map: `docs/architecture.md`.
 
+> **Start here: `docs/progress.md`.** It records which phases are done, the evidence they passed
+> their Definition of Done, deviations from PLAN.md, and open items. **Phases 0 and 1 are complete;
+> Phase 2 (synchronous ingest) is next.** Section 3 below has been partly superseded — read it
+> together with `docs/adr/0002-tech-stack-resolution.md`.
+
 ---
 
 ## 1. Goal
@@ -39,23 +44,37 @@ debt, not an asset.
 
 ## 3. Tech stack — decided
 
-| | |
-|---|---|
-| Python | 3.11, managed with `uv` |
-| DB | PostgreSQL 16 + pgvector |
-| ORM | SQLAlchemy 2.x + Alembic |
-| API | FastAPI + uvicorn |
-| PDF | PyMuPDF (`fitz`) — accurate page numbers required |
-| DOCX | `python-docx` |
-| Embedding | `text-embedding-3-small` (1536 dim) |
-| LLM | read from env, defaults to `claude-sonnet-4-6` |
-| Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames |
-| Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) |
-| Test | pytest |
+Four rows below were superseded during Phase 0 by
+[ADR-0002](docs/adr/0002-tech-stack-resolution.md), after the human gate. **Build against the
+"as built" column** — it is what is running and what the schema already encodes.
 
-> ⚠️ **Project-blocking question:** is the data allowed to leave for an external API? If NOT,
-> all embedding/LLM must be self-hosted (Ollama + `bge-m3`) and the stack changes. See HUMAN GATE
-> Phase 0. Do not decide this on your own.
+| | originally written here | as built |
+|---|---|---|
+| Python | 3.11, managed with `uv` | **3.12**, managed with `uv` |
+| DB | PostgreSQL 16 + pgvector | same |
+| ORM | SQLAlchemy 2.x + Alembic | same, **async** (`asyncpg`) |
+| API | FastAPI + uvicorn | same |
+| PDF | PyMuPDF (`fitz`) — accurate page numbers required | same |
+| DOCX | `python-docx` | same |
+| Embedding | `text-embedding-3-small` (1536 dim) | **`gemini-embedding-001`, 768 dim**, read from `.env` |
+| LLM | read from env, defaults to `claude-sonnet-4-6` | read from `.env`, currently **`gemini-2.5-flash`** via LiteLLM |
+| Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames | same |
+| Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) | same |
+| Test | pytest | same (+ `pytest-asyncio`) |
+
+The vector dimension **768** is written in three places that must change together: `.env`
+(`EMBEDDING_DIMENSIONS`), `app/models/chunk.py` (`EMBEDDING_DIM`), and the initial migration.
+Changing it is a migration plus a full re-ingest plus a re-run of every pipeline.
+
+Deliberately **not** in v1, despite PLAN.md line 14 suggesting them: Celery + Redis, LangChain,
+LangGraph, Chonkie. Each is rejected in ADR-0002 with a named trigger for revisiting. Do not add
+them without an ADR.
+
+> ✅ **Project-blocking question — answered 2026-08-09, see
+> [ADR-0001](docs/adr/0001-scope-va-data-boundary.md).** Data **is** allowed to leave for an
+> external API; Gemini is approved. Self-hosting (Ollama + `bge-m3`) is therefore not needed. Do
+> not re-open this on your own; if it is reversed, every embedding and every committed result is
+> invalidated.
 
 ## 4. Architecture principles
 

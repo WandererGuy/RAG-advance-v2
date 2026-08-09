@@ -110,3 +110,48 @@ Verified beyond the stated bar:
 ---
 
 ## Phase 2 — Synchronous ingest ⬜ not started
+
+### Handoff — read this before starting
+
+State: working tree clean at `42c50dd`, the `rag_postgres` container is up and migrated. Bring the
+environment back with `make up && make migrate`, and confirm with
+`curl localhost:8000/api/v1/health` → `{"status":"ok","database":"up"}`.
+
+Blocking on a human, both carried over from earlier phases:
+
+1. **Nobody is named as the golden-set author.** Phase 3 is a hard gate — the agent must not write
+   the questions (CLAUDE.md 5.6). Resolve this while Phase 2 is in flight, or the project stalls
+   the moment Phase 2 ends.
+2. **`backend/.env` still exists** with a duplicate of both API keys. The live config is the
+   repo-root `.env`. Deleting the stale one was blocked by a permission prompt.
+
+What Phase 2 builds, per PLAN.md: `llm/rag/chunking.py` (800/100, character split preferring
+sentence/paragraph boundaries, `page_no` preserved) · `llm/rag/embedder.py` (`Embedder` protocol +
+implementation, batches of 32, exponential backoff, token counting) · `llm/rag/vector_store.py`
+(`VectorStore` protocol — `add_chunks`, `search`, `delete_by_document` — pgvector only) ·
+`repositories/document_repo.py` (all SQL lives here) · `services/ingest_service.py` (hash → skip
+unless `--force` → load → chunk → embed → single transaction → `status=done`; on failure rollback,
+`status=failed` + `error_message`, log, continue to the next file; **no fastapi import**) ·
+loaders for PDF and DOCX · `scripts/ingest_corpus.py` · `tests/unit/test_chunking.py` ·
+`tests/integration/test_ingest.py`.
+
+Traps found while building Phases 0–1 that Phase 2 will hit:
+
+- **`gemini-embedding-001` returns 3072 dimensions by default.** The schema is `vector(768)`, so
+  the embedder must explicitly request 768 (`dimensions=768` through LiteLLM) or every insert will
+  fail on dimension mismatch. Verify the returned vector length before the first bulk ingest.
+- **`data/samples/` is empty**, so the integration test has no fixture. Copy one of the 8 real PDFs
+  from `data/raw/HR_pdfs/` into it — do not generate a sample PDF (CLAUDE.md 5.5). `data/samples/`
+  is deliberately un-ignored in `.gitignore` while `data/raw/*` is ignored.
+- **DOCX has no real page numbers**; `chunks.page_no` is nullable for exactly this reason. State the
+  limitation in the loader docstring. The corpus is PDF-only, so this path is untested by the corpus.
+- **`app/llm/`, `app/llm/rag/`, `app/repositories/` and `app/services/` have no `__init__.py`** —
+  they were removed to keep Phase 2+ directories free of empty `.py` files. Add them when the
+  modules land.
+- **`ix_chunks_document_id_chunk_index` is unique on `(document_id, chunk_index)`.** A re-ingest
+  that does not delete old chunks first will violate it — which is the constraint doing its job.
+- Ingest must be idempotent on `file_hash`; `documents.file_hash` is already `UNIQUE`.
+
+Definition of Done is a **mandatory human eyeball check**: 5 random chunks read by a person, who
+confirms no lost Vietnamese diacritics, no header/footer contamination, no words cut in half, and
+correct `page_no`. The agent cannot sign this off.
