@@ -137,6 +137,12 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
 8. **Every number must be written to `results/*.json` and committed.** No verbal reporting.
 9. Commit per phase: `feat(phase-2): sync ingest pipeline`.
 10. Secrets live only in `.env` (already gitignored). `.env.example` is committed with empty values.
+11. **A phase is not finished until `docs/progress.md` has its entry.** Write it before the phase
+    commit and include it in that same commit. Four things, every time: what was built, the
+    command output proving the Definition of Done, deviations from PLAN.md and why, and open
+    items — especially anything blocked on a human. Rule 8 applies here too: the evidence goes in
+    the file, not only into the chat. The next session starts with this file and remembers
+    nothing else.
 
 ## 6. Code conventions
 
