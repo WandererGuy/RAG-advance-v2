@@ -31,18 +31,23 @@ revisiting each.
 
 ## How to run
 
-Not runnable yet — Phase 0 is complete, Phase 1 (infrastructure and schema) is next. Once Phase 1
-lands, from the repository root:
+Phases 0 and 1 are done: the database, the schema and a health endpoint work. There is no ingest
+and no chat yet — those are Phases 2 and 5. From the repository root:
 
 ```bash
 cp .env.example .env    # then fill in DEFAULT_LLM_API_KEY and EMBEDDING_API_KEY
-make up                 # postgres + pgvector
+make install            # uv sync
+make up                 # postgres + pgvector, waits until healthy
 make migrate            # alembic upgrade head
-make api                # uvicorn, then curl localhost:8000/api/v1/health
+make api                # uvicorn
+curl localhost:8000/api/v1/health   # -> {"status":"ok","database":"up"}
 ```
 
-Later phases add `make ingest`, `make eval P=naive-v1`, `make report`, `make test`, `make lint`.
-All commands run from the repository root; the Makefile handles the `cd backend`.
+`make test`, `make lint`, `make psql` and `make down` also work. Later phases add `make ingest`,
+`make eval P=naive-v1` and `make report`. All commands run from the repository root; the Makefile
+handles the `cd backend`.
+
+Progress and per-phase verification evidence: [docs/progress.md](docs/progress.md).
 
 ## How the project is organised
 
