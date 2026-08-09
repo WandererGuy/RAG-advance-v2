@@ -1,0 +1,28 @@
+# secrets — catch .env at root, backend/, frontend/, everywhere
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# corpus — real documents stay out of git; data/samples/ is the committed exception
+data/raw/*
+!data/raw/.gitkeep
+!data/samples/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# local db files
+*.db
+*.sqlite3
+
+# scratch
+/old_code/
+.DS_Store
