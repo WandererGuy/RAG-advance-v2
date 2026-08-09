@@ -109,7 +109,108 @@ Verified beyond the stated bar:
 
 ---
 
-## Phase 2 — Synchronous ingest ⬜ not started
+## Phase 2 — Synchronous ingest 🟡 built, awaiting the human eyeball check
+
+**Built** 2026-08-09
+
+`llm/rag/loaders.py` (PDF via PyMuPDF with real page numbers, DOCX via python-docx with none) ·
+`llm/rag/chunking.py` · `llm/rag/embedder.py` · `llm/rag/vector_store.py` ·
+`repositories/document_repo.py` · `services/ingest_service.py` · `scripts/ingest_corpus.py` ·
+[ADR-0003](adr/0003-vector-store-over-repository.md) · `tests/unit/test_chunking.py` (17 tests) ·
+`tests/integration/{conftest,test_ingest}.py` (7 tests) · `make ingest`.
+
+**Corpus ingested:** 8 documents, all `done`, **34 chunks**, zero null embeddings, ~9s wall clock.
+A second `make ingest` reports `ingested 0 · skipped 8 · failed 0` with the chunk count still 34 —
+idempotency on `file_hash` holds.
+
+| Check | Result |
+|---|---|
+| `SELECT status, count(*) FROM documents GROUP BY status` | `done: 8` |
+| `SELECT count(*) FROM chunks` | `34` |
+| chunks with `embedding IS NULL` | `0` |
+| returned embedding length | 768, matching `vector(768)` |
+| `make lint` | ruff + mypy clean, 28 source files |
+| `make test` | 31 passed |
+| `alembic check` | still no drift after the import fix below |
+
+### ⛔ Definition of Done is NOT met yet — it needs you
+
+PLAN.md makes the sign-off a human eyeball check, and CLAUDE.md forbids the agent from making it.
+Five random chunks were pulled and printed for review; **a person still has to confirm** no lost
+diacritics, no header/footer contamination, no half-words, correct `page_no`. To re-draw a sample:
+
+```sql
+SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;
+```
+
+### What the sample already showed
+
+- **Diacritics and `page_no` were correct** in all five chunks; no chunk mixed two pages.
+- **`05_bao_mat_thong_tin_va_thiet_bi.pdf` p.2 contains `ảnh hưởng xếp loạ`** — a word truncated
+  **in the PDF's own text layer**, confirmed by reading the raw PyMuPDF extraction. Not a chunking
+  bug, and not fixable downstream. The source document needs regenerating.
+- **Tables flatten into a linear stream of cells.** The same page's violation-severity table
+  becomes `Mức độ / Ví dụ / Hình thức xử lý / Nhẹ / …`, losing which example belongs to which
+  severity. Naive text extraction does this to every table. Questions whose answer lives in a
+  table cell are the ones most likely to fail in Phase 4 — worth a few `multi_hop` golden-set
+  questions aimed straight at them.
+
+### Decisions made while building
+
+- **A chunk never spans a page break**, so every `page_no` is exact rather than inferred. The cost
+  is that a sentence crossing a page boundary becomes two partial chunks. With 2-page documents
+  averaging 4 chunks each, that boundary is hit once per document.
+- **Boundary snapping order: paragraph → sentence → line → space**, searching back up to a quarter
+  of the window. The sentence regex requires whitespace after the terminator, which is what keeps
+  clause numbers like `6.3` from being split down the middle.
+- **`token_count` is tiktoken `cl100k_base`, an approximation.** Gemini publishes no local
+  tokenizer. Nothing branches on the number; it is for inspection.
+- **Three commits per document, not one** — `processing` lands first so a crash mid-embed leaves a
+  record; the chunk rewrite and `status=done` commit together; a failure rolls back and then writes
+  `status=failed` in its own transaction, since a rolled-back one cannot record why it rolled back.
+- **Ingest is sequential.** The embedding provider is the bottleneck and is rate-limited;
+  concurrency here buys latency and pays in 429s.
+- **Integration tests run against a `rag_test` database**, created on demand from the models and
+  truncated after each test. Sharing the dev database would have meant tests renumbering the very
+  chunk ids Phase 3 is about to reference. No mocks: real Postgres, real embedding calls; the
+  suite skips with a reason when either is unavailable.
+- **No header/footer stripping.** All 16 pages were checked for repeated running heads: there are
+  none. The only repeated line is each document's title on its own page 1, which is real content.
+  A stripping heuristic here would only be a way to delete content by accident.
+
+### Deviations
+
+- **Fixed a latent circular import in Phase 1 code.** `app/db/base.py` imported every model at the
+  bottom while each model imported `Base` from it, so whether an entrypoint worked depended on
+  which side it reached first. Tests and alembic happened to import `app.db.base` first; the very
+  first run of `make ingest` imported `app.models` first and died with an `ImportError`. `base.py`
+  is now a leaf, and **importing `app.models` is what completes the metadata** — `alembic/env.py`
+  and the test schema builder do that explicitly. `alembic check` still reports no drift.
+- **`data/samples/04_nghi_phep_va_lam_viec_tu_xa.pdf`** is a copy of a real corpus document, per
+  the handoff note. Nothing was generated.
+- **`make ingest` takes `P=` and `FORCE=1`**, beyond the bare target CLAUDE.md §7 lists.
+- **The integration suite has 7 tests, not the 1 PLAN.md asked for.** Idempotency alone would not
+  have caught a wrong-length embedding, a lost `page_no`, or a failed document taking the whole run
+  down with it.
+
+### Open
+
+- **The golden-set owner is still unnamed** — carried over from Phase 0 and now urgent. Phase 3 is
+  the next phase and it is a hard human gate; the agent must not write the questions
+  (CLAUDE.md 5.6). Nothing else can proceed past Phase 2 until someone is named.
+- **`backend/.env` still exists** with a duplicate of both API keys; deleting it was blocked by a
+  permission prompt again. The live config is the repo-root `.env`. Gitignored, never committed.
+- **Chunk ids are assigned on insert, so any `--force` re-ingest renumbers them.** Phase 3's
+  `relevant_chunk_ids` will point at the wrong text the moment someone re-ingests. Freeze the
+  corpus before the golden set is written, or plan to regenerate it.
+- Tables lose their structure at extraction (above). If Phase 4 shows table questions failing, the
+  fix is a structured extractor, not a bigger `top_k` — and it needs its own ADR.
+- The staged deletion of `backend/eval/*/.gitkeep` and `results/.gitkeep` predates this phase and
+  was left alone; those are Phase 3–4 directories. Commit or restore it as you see fit.
+
+---
+
+## Phase 2 — original handoff notes
 
 ### Handoff — read this before starting
 

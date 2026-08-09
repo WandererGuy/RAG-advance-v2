@@ -1,4 +1,4 @@
-.PHONY: help up down logs psql install migrate revision api test lint fmt
+.PHONY: help up down logs psql install migrate revision api ingest test lint fmt
 .DEFAULT_GOAL := help
 
 BACKEND := backend
@@ -30,6 +30,9 @@ revision:  ## autogenerate a migration: make revision M="add x"
 
 api:  ## run the API with reload
 	cd $(BACKEND) && $(UV) run uvicorn app.main:app --reload
+
+ingest:  ## ingest the corpus: make ingest [P=../data/raw] [FORCE=1]
+	cd $(BACKEND) && $(UV) run python -m scripts.ingest_corpus --path $(or $(P),../data/raw) $(if $(FORCE),--force,)
 
 test:  ## pytest
 	cd $(BACKEND) && $(UV) run pytest

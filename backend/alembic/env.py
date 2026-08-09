@@ -13,7 +13,11 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from app.core.config import get_settings
-from app.db.base import Base  # imports every model, so autogenerate sees all tables
+from app.db.base import Base
+
+# Imported for the side effect of registering all three tables on Base.metadata. Without it
+# autogenerate sees an empty schema and cheerfully proposes dropping every table.
+import app.models  # noqa: E402,F401  isort: skip
 
 config = context.config
 

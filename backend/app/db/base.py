@@ -1,7 +1,14 @@
-"""DeclarativeBase + model imports.
+"""DeclarativeBase and the shared column mixins. Deliberately a leaf module.
 
-Alembic autogenerate only sees tables that are attached to Base.metadata, so every model
-module must be imported here. Importing this module is what makes the metadata complete.
+Alembic autogenerate only sees tables attached to `Base.metadata`, and this file used to import
+every model to guarantee that. It cannot: each model imports `Base` from here, so the models had
+to be imported *after* `Base` was defined, and any module that reached `app.models` before
+`app.db.base` hit a partially-initialized module and an ImportError. Whether the code worked
+depended on which import an entrypoint happened to run first.
+
+**Importing `app.models` is now what completes the metadata** — its `__init__` imports all three
+model modules. Anything needing the full metadata (alembic, the test schema builder) imports
+`app.models`, not just this module.
 """
 
 from __future__ import annotations
@@ -27,9 +34,4 @@ class TimestampMixin:
     )
 
 
-# Imported for their side effect of registering tables on Base.metadata.
-from app.models.chunk import Chunk  # noqa: E402,F401
-from app.models.document import Document  # noqa: E402,F401
-from app.models.query import Query  # noqa: E402,F401
-
-__all__ = ["Base", "Chunk", "Document", "Query", "TimestampMixin"]
+__all__ = ["Base", "TimestampMixin"]
