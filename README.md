@@ -21,10 +21,13 @@ document-level permissions, OCR, Qdrant.
 
 ## Stack
 
-Python 3.12 (`uv`) · FastAPI · PostgreSQL 16 + pgvector · SQLAlchemy 2.x + Alembic · PyMuPDF ·
-LiteLLM → Gemini (`gemini-2.5-flash`, `gemini-embedding-001` at 768 dim) · Jinja2 prompts · pytest.
+Python 3.12 (`uv`) · FastAPI · PostgreSQL 16 + pgvector, async via SQLAlchemy 2.x + `asyncpg` ·
+Alembic · PyMuPDF · LiteLLM, with the LLM and embedding model read from `.env` — currently Gemini
+(`gemini-2.5-flash`, `gemini-embedding-001` at 768 dim) · Jinja2 prompts · pytest.
 
-See [ADR-0002](docs/adr/0002-tech-stack-resolution.md) for why, and what was deliberately left out.
+Celery + Redis, Chonkie and LangChain / LangGraph are deliberately not in v1; they can be added
+later. See [ADR-0002](docs/adr/0002-tech-stack-resolution.md) for the reasoning and the trigger for
+revisiting each.
 
 ## How to run
 

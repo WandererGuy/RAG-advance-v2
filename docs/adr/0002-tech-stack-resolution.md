@@ -14,7 +14,7 @@ it wrong means a full re-ingest.
 | Python | 3.11 | 3.12 | — |
 | Embedding | `text-embedding-3-small`, 1536 dim | from env | `gemini-embedding-001`, **768 dim** |
 | LLM | `claude-sonnet-4-6` | from env | `gemini-2.5-flash` |
-| DB access | SQLAlchemy 2.x + Alembic | asyncpg, async | — |
+| DB access | SQLAlchemy 2.x + Alembic (sync implied) | asyncpg, async | — |
 | Chunking | own code, 800/100 chars | Chonkie | — |
 | Background jobs | none until after Phase 6 | Celery + Redis | — |
 | Orchestration | none | LangChain + LangGraph | — |
@@ -41,13 +41,19 @@ rewrite, which is the main reason to accept the dependency at all.
 are a product requirement, since every answer must cite `[filename, p.N]`, and PyMuPDF is the option
 that gives real page boundaries.
 
-**Sync SQLAlchemy 2.x** with the `psycopg` v3 driver, rejecting PLAN.md's asyncpg suggestion. The
-two heaviest workloads are `scripts/ingest_corpus.py` and `eval/runner.py`, both of which are
-sequential CLI processes where async buys nothing. `/chat` is dominated by time spent waiting on
-Gemini, not on Postgres. Async sessions would make the repository layer harder to test and would put
-`await` in every call path for no measured gain.
+**Async SQLAlchemy 2.x** with the `asyncpg` driver, as PLAN.md suggests. Every layer that touches the
+database is async: `AsyncEngine` + `async_sessionmaker`, `AsyncSession` in repositories, `async def`
+services, an async Alembic `env.py`, and `asyncio.run(...)` entrypoints in `scripts/ingest_corpus.py`
+and `eval/runner.py`.
 
-**Rejected for v1: Celery + Redis, LangChain, LangGraph, Chonkie.**
+The alternative was sync SQLAlchemy with `psycopg` v3, which would have been marginally simpler to
+test. It was rejected: FastAPI is async natively, so a sync session either blocks the event loop or
+has to be pushed to a threadpool, and Phase 2 batches 32 embeddings per Gemini call — concurrency
+there is where ingest time actually goes. Committing to async now avoids converting the repository
+layer later, which is the change that touches every call site.
+
+**Rejected for v1: Celery + Redis, LangChain, LangGraph, Chonkie.** Not rejected permanently — each
+can be added later once there is a concrete reason and its own ADR.
 
 - Celery + Redis: CLAUDE.md explicitly locks `app/workers/` until after Phase 6, and v1 ingest is
   synchronous by design. Adding a broker now means operating two more services to run a CLI script.
@@ -67,7 +73,13 @@ Gemini, not on Postgres. Async sessions would make the repository layer harder t
 - Changing the embedding model or its dimension is a schema migration plus a full re-ingest plus a
   re-run of every pipeline. `EMBEDDING_DIMENSIONS` is read from config, but the migration hard-codes
   768 — Alembic cannot generate a dynamic column type, so the two must be changed together.
-- Dependency count in Phases 1–2 stays small: fastapi, uvicorn, sqlalchemy, alembic, psycopg,
-  pgvector, pydantic-settings, structlog, litellm, pymupdf, python-docx, tiktoken, pytest.
+- Dependency count in Phases 1–2 stays small: fastapi, uvicorn, sqlalchemy[asyncio], alembic,
+  asyncpg, pgvector, pydantic-settings, structlog, litellm, pymupdf, python-docx, tiktoken, pytest,
+  pytest-asyncio.
+- Async has a cost that lands in specific places, all in Phase 1: `DATABASE_URL` must carry the
+  `postgresql+asyncpg://` scheme, Alembic needs its async `env.py` template rather than the default,
+  and integration tests need `pytest-asyncio` with an async session fixture. Raw SQL executed through
+  `asyncpg` uses `$1` placeholders rather than `%s` if it ever bypasses SQLAlchemy — relevant for the
+  Phase 6 `tsvector` queries in `bm25.py`.
 - The rejections above are recorded so Phase 6 does not relitigate them from scratch; each has a
   named trigger for revisiting, and reversing any one of them is additive rather than destructive.

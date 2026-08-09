@@ -11,7 +11,15 @@ After each phase: run the Definition of Done → report → wait for confirmatio
 
 ---
 
-Suggest Tech stack: uv, Python 3.12 + FastAPI, asyncpg for async PostgreSQL, LiteLLM, Celery for background jobs with Redis as broker/result backend, Chonkie for document chunking, LangChain, LangGraph. LLM and embedding models are configured in .env.
+**Tech stack — resolved, see [ADR-0002](docs/adr/0002-tech-stack-resolution.md):** uv, Python 3.12 +
+FastAPI, PostgreSQL 16 + pgvector accessed **asynchronously** (SQLAlchemy 2.x async + `asyncpg`),
+Alembic, LiteLLM as the provider wrapper, PyMuPDF for PDF. **LLM and embedding models are read from
+`.env`** — currently Gemini (`gemini-2.5-flash`, `gemini-embedding-001` at 768 dim); nothing about
+the provider is hardcoded.
+
+Extras (Celery + Redis for background jobs, Chonkie for chunking, LangChain / LangGraph for
+orchestration) are **not part of v1** — they can be added later when there is a concrete reason and
+an ADR. Each is listed in ADR-0002 with the trigger that would justify it.
 
 ## Phase 0 — Lock the scope + skeleton (half a day)
 
