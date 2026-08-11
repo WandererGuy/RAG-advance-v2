@@ -31,21 +31,38 @@ revisiting each.
 
 ## How to run
 
-Phases 0 and 1 are done: the database, the schema and a health endpoint work. There is no ingest
-and no chat yet — those are Phases 2 and 5. From the repository root:
+Phases 0–2 are done: the database, the schema, the health endpoint and synchronous ingest work.
+There is no chat endpoint yet — that is Phase 5, and the only route the API serves today is
+`/api/v1/health`.
+
+### To run it right now
+
+On a machine where the stack is already provisioned — postgres up, venv synced, migrations
+applied, corpus ingested:
 
 ```bash
-cp .env.example .env    # then fill in DEFAULT_LLM_API_KEY and EMBEDDING_API_KEY
-make install            # uv sync
-make up                 # postgres + pgvector, waits until healthy
-make migrate            # alembic upgrade head
-make api                # uvicorn
+make up      # postgres is probably already up; this is a no-op safety check
+make api     # uvicorn on :8000, with reload
 curl localhost:8000/api/v1/health   # -> {"status":"ok","database":"up"}
 ```
 
-`make test`, `make lint`, `make psql` and `make down` also work. Later phases add `make ingest`,
-`make eval P=naive-v1` and `make report`. All commands run from the repository root; the Makefile
-handles the `cd backend`.
+### From scratch on a fresh machine
+
+```bash
+cp .env.example .env    # fill DEFAULT_LLM_API_KEY + EMBEDDING_API_KEY (Gemini)
+make install            # uv sync --extra dev
+make up                 # docker compose up -d --wait
+make migrate            # alembic upgrade head
+make ingest             # defaults to --path ../data/raw
+make api
+```
+
+All targets run from the repository root — the Makefile handles the `cd backend`. Also available:
+`make test`, `make lint`, `make psql`, `make logs`, `make down`, and `make ingest FORCE=1` to
+re-ingest. Later phases add `make eval P=naive-v1` and `make report`.
+
+`make ingest FORCE=1` reassigns chunk ids, which invalidates the Phase 3 golden set's
+`relevant_chunk_ids`. Freeze the corpus before that golden set is written.
 
 Progress index: [docs/progress.md](docs/progress.md) — phase status, what is blocked on a human,
 and a link to the per-phase entry in [docs/progress/](docs/progress/) holding the verification

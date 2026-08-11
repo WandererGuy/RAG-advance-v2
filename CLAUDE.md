@@ -141,10 +141,22 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
 10. Secrets live only in `.env` (already gitignored). `.env.example` is committed with empty values.
 11. **A phase is not finished until `docs/progress/phase-N.md` exists**, with its row added to the
     `docs/progress.md` index. Write it before the phase commit and include it in that same commit.
-    Four things, every time: what was built, the command output proving the Definition of Done,
-    deviations from PLAN.md and why, and open items — especially anything blocked on a human.
-    Rule 8 applies here too: the evidence goes in the file, not only into the chat. The next
-    session starts with these files and remembers nothing else.
+    Five things, every time: what was built, the command output proving the Definition of Done,
+    deviations from PLAN.md and why, open items — especially anything blocked on a human — and a
+    closing **"What you can do after this phase"** section. Rule 8 applies here too: the evidence
+    goes in the file, not only into the chat. The next session starts with these files and
+    remembers nothing else.
+12. **Every phase entry ends with "What you can do after this phase"**, in five parts, matching the
+    shape already in `docs/progress/phase-{0,1,2}.md`:
+    - **Available** — what exists and runs now, and what explicitly does *not* yet.
+    - **Commands that work at this point** — a copy-pasteable block of only the commands that
+      actually work after this phase, plus the useful SQL / `curl` calls. Do not list a command
+      from a later phase.
+    - **Technical, possible now** and **Non-technical, possible now** — what a person can do with
+      the phase's output, including the review, decision and naming steps only a human can take.
+    - **Notice** — the traps: destructive flags, things that look fine but fail later, silent
+      failure modes.
+    - **For the next phase (N+1)** — what the next session must know before it starts writing code.
 
 ## 6. Code conventions
 

@@ -95,6 +95,62 @@ SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;
 - Tables lose their structure at extraction (above). If Phase 4 shows table questions failing, the
   fix is a structured extractor, not a bigger `top_k` — and it needs its own ADR.
 
+### What you can do after this phase
+
+**Available:** the corpus is in the database — 8 documents, 34 chunks, every chunk carrying a
+768-dim embedding and an exact `page_no`. Everything from Phase 1 still applies. There is still
+**no retrieval and no question answering**: `retrievers/`, `pipelines/`, `eval/` and the chat route
+are Phases 3–5. `VectorStore.search` exists but nothing calls it.
+
+**Commands that work at this point:**
+
+```bash
+make up && make migrate                    # bring the environment back
+make ingest                                # idempotent: re-running skips all 8
+make ingest P=../data/samples              # ingest one directory or one file
+make ingest FORCE=1                        # rebuild chunks — RENUMBERS chunk ids, see below
+make test                                  # 31 passed (unit + integration against rag_test)
+make lint                                  # 28 source files, clean
+make psql
+```
+
+Useful inside `make psql`:
+
+```sql
+SELECT filename, status, page_count FROM documents ORDER BY filename;
+SELECT count(*) FROM chunks;                      -- 34
+SELECT count(*) FROM chunks WHERE embedding IS NULL;   -- must stay 0
+SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;   -- the sign-off sample
+SELECT document_id, page_no, left(content, 80) FROM chunks ORDER BY document_id, chunk_index;
+```
+
+**Technical, possible now:** read the actual chunk text and judge chunk quality before any
+retrieval number exists to argue about; measure how the 800/100 split lands on these specific
+documents (34 chunks over 16 pages) and note where a clause got cut; ingest a DOCX to exercise the
+untested loader path — the corpus is PDF-only; delete a document row and re-ingest to watch
+idempotency and the failure path; hand-write a `search` call in a scratch script if you want to see
+what dense retrieval will return in Phase 4.
+
+**Non-technical, possible now:** **do the Phase 2 sign-off** — read 5 random chunks and confirm
+diacritics, page numbers, no half-words, no header/footer junk; that single act unblocks the phase.
+**Name the golden-set author** — nothing past here moves without it. Regenerate
+`05_bao_mat_thong_tin_va_thiet_bi.pdf`, whose own text layer truncates a word. Decide whether the
+corpus is frozen; from Phase 3 on, adding or re-ingesting documents costs real rework.
+
+**Notice:** `make ingest FORCE=1` deletes and reinserts chunks, which **assigns new chunk ids** —
+run it freely now, never after the golden set is written. Ingest is sequential and calls a
+rate-limited external API; ~9s for 8 documents, and a much larger corpus will be slow, not broken.
+Table content is flattened into a stream of cells at extraction, so the answer to a
+"which penalty applies to X" question may no longer be adjacent to X. A failed document does not
+stop the run — check `SELECT filename, error_message FROM documents WHERE status = 'failed'` rather
+than trusting a zero exit code.
+
+**For the next phase (3 — golden set):** freeze the corpus first, then take chunk ids from a
+database that will not be re-ingested. Aim some `multi_hop` questions at the flattened tables; they
+are the ones most likely to fail in Phase 4 and the most informative when they do. Do not expect an
+answer to anything that depends on the truncated word in document 05. The agent must not write the
+questions (CLAUDE.md 5.6).
+
 ---
 
 ## Handoff notes written before this phase — superseded, kept for the record

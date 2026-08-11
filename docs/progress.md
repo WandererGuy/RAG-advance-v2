@@ -3,7 +3,9 @@
 **Start here.** One file per phase in [`progress/`](progress/), each recording what was built, the
 command output proving the Definition of Done, deviations from PLAN.md, and open items. Decisions
 with trade-offs live in [`adr/`](adr/) — the progress log records what happened, not why a design
-was chosen.
+was chosen. Each entry ends with **"What you can do after this phase"**: the commands that work at
+that point, what is and is not possible yet, what to watch out for, and what the next phase needs
+to know.
 
 | Phase | Status | Entry |
 |---|---|---|
