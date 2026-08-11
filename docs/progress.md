@@ -11,8 +11,8 @@ to know.
 |---|---|---|
 | 0 — Lock the scope + skeleton | ✅ done | [progress/phase-0.md](progress/phase-0.md) |
 | 1 — Infrastructure + schema | ✅ done | [progress/phase-1.md](progress/phase-1.md) |
-| 2 — Synchronous ingest | 🟡 built, awaiting a human eyeball check | [progress/phase-2.md](progress/phase-2.md) |
-| 3 — Golden set | ⬜ blocked, see below | — |
+| 2 — Synchronous ingest | ✅ done — sign-off **agent-executed**, not human-signed | [progress/phase-2.md](progress/phase-2.md) |
+| 3 — Golden set | ⬜ not started, **unblocked** by [ADR-0004](adr/0004-agent-authored-golden-set.md) | — |
 | 4 — `naive-v1` baseline | ⬜ not started | — |
 | 5 — API + thin frontend | ⬜ not started | — |
 | 6 — Improvements | ⬜ not started | — |
@@ -20,19 +20,32 @@ to know.
 ## Where the project stands
 
 The corpus is ingested: 8 documents, 34 chunks, 768-dim embeddings, idempotent on re-run. The
-build is green (`make lint`, `make test` → 31 passed). Nothing in Phase 2 is waiting on code.
+build is green (`make lint`, `make test` → 31 passed). Phase 2 is closed. Phase 3 is next and can
+start: freeze the corpus, then write `eval/datasets/golden_qa.v1.jsonl` under ADR-0004's
+constraints, alongside `find_chunks.py`, `validate.py` and the dataset README.
 
-## Blocked on a human — read before starting anything
+## Gates taken by the agent — read before quoting anything
 
-1. **Nobody is named as the golden-set author.** Phase 3 is the next phase and is a hard gate: the
-   agent must not write the questions (CLAUDE.md 5.6). This has been open since Phase 0 and now
-   blocks all forward progress.
-2. **Phase 2 is not signed off.** Its Definition of Done is a human reading 5 random chunks and
-   confirming no lost diacritics, no header/footer contamination, no half-words, correct `page_no`.
-   Draw a sample with `SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;`.
-3. **`backend/.env` is redundant and still on disk** with a duplicate of both API keys. The live
-   config is the repo-root `.env`. Deleting it has been blocked by a permission prompt twice. It is
-   gitignored and was never committed.
+Both human gates were **authorised by the project owner on 2026-08-11** and executed by the agent
+because no human was available. Neither is human-signed, and the distinction is load-bearing.
+
+1. **Phase 2 sign-off — agent-executed 2026-08-11.** PLAN.md asks a person to read 5 random chunks;
+   instead all 34 were checked mechanically (page numbers, diacritics, word boundaries, running
+   heads: clean) plus a visual read of two rendered pages. Evidence in
+   [phase-2](progress/phase-2.md). A human countersigning it later costs minutes and upgrades what
+   every downstream number may be claimed to be.
+2. **The golden set will be agent-authored** — nobody was ever named, so CLAUDE.md 5.6 is
+   superseded by [ADR-0004](adr/0004-agent-authored-golden-set.md). That ADR names what this
+   inflates (retrieval metrics most, `refusal_accuracy` least trustworthily), the method
+   constraints binding the writing, and the triggers for a human-written `v2`. **Every
+   `results/*.json` from Phase 4 on carries `golden_set_author`, and no number may be quoted
+   without it.**
+
+## Still blocked on a human
+
+- **`backend/.env` is redundant and still on disk** with a duplicate of both API keys. The live
+  config is the repo-root `.env`. Deleting it has been blocked by a permission prompt twice. It is
+  gitignored and was never committed.
 
 ## Carried-over open items
 

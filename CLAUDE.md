@@ -5,8 +5,9 @@ Build plan: `PLAN.md`. Phase → directory map: `docs/architecture.md`.
 
 > **Start here: `docs/progress.md`.** It is a short index — the status of every phase, what is
 > blocked on a human, and a link to one file per phase in `docs/progress/` holding the evidence,
-> deviations and open items. **Phases 0 and 1 are complete; Phase 2 is built but not signed off
-> (its Definition of Done needs a human); Phase 3 is blocked on naming a golden-set author.**
+> deviations and open items. **Phases 0–2 are complete; Phase 2's sign-off was agent-executed, not
+> human-signed. Phase 3 is unblocked: the golden set is agent-authored under
+> [ADR-0004](docs/adr/0004-agent-authored-golden-set.md), which rule 5.6 below now defers to.**
 > Section 3 below has been partly superseded — read it together with
 > `docs/adr/0002-tech-stack-resolution.md`.
 
@@ -133,10 +134,19 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
    its own name.
 5. **No mocks, no fake data.** No real documents or API key yet → stop and ask.
    Absolutely do not generate sample PDFs just to "make it run".
-6. **Do not write the golden set yourself** (Phase 3). If asked to, refuse and explain why.
+6. ~~**Do not write the golden set yourself** (Phase 3). If asked to, refuse and explain why.~~
+   **Superseded 2026-08-11 by [ADR-0004](docs/adr/0004-agent-authored-golden-set.md)**, after the
+   project owner authorised the agent to take the gate. The golden set *is* agent-authored, and
+   the ADR's conditions are binding: every line carries an `author` field, `validate.py` rejects a
+   line without one, and every `results/*.json` carries `golden_set_author`. Read the ADR's
+   inflation table before quoting any number. A human writing `golden_qa.v2.jsonl` is still the
+   goal, not a nice-to-have — the ADR names the triggers.
 7. **Every technical decision with a trade-off → write one ADR** in `docs/adr/NNNN-title.md`
    (Context / Decision / Consequences). Do not argue it out in commit messages.
-8. **Every number must be written to `results/*.json` and committed.** No verbal reporting.
+8. **Every number must be written to `results/*.json` and committed.** No verbal reporting. From
+   Phase 4 on, every results file also carries **`golden_set_author`** next to `dataset_version`,
+   and `leaderboard.md` shows it as a column — so no score of this system can be read, quoted or
+   pasted without the provenance of the questions that produced it (ADR-0004).
 9. Commit per phase: `feat(phase-2): sync ingest pipeline`.
 10. Secrets live only in `.env` (already gitignored). `.env.example` is committed with empty values.
 11. **A phase is not finished until `docs/progress/phase-N.md` exists**, with its row added to the

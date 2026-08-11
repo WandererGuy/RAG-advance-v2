@@ -1,6 +1,8 @@
-## Phase 2 — Synchronous ingest 🟡 built, awaiting the human eyeball check
+## Phase 2 — Synchronous ingest ✅ done (sign-off agent-executed, not human-signed)
 
-**Built** 2026-08-09
+**Built** 2026-08-09 · **Signed off** 2026-08-11 by the agent, under the owner's explicit
+authorisation of 2026-08-11. **No human read the chunks.** See the sign-off section below for what
+that check could and could not establish.
 
 `llm/rag/loaders.py` (PDF via PyMuPDF with real page numbers, DOCX via python-docx with none) ·
 `llm/rag/chunking.py` · `llm/rag/embedder.py` · `llm/rag/vector_store.py` ·
@@ -22,27 +24,56 @@ idempotency on `file_hash` holds.
 | `make test` | 31 passed |
 | `alembic check` | still no drift after the import fix below |
 
-### ⛔ Definition of Done is NOT met yet — it needs you
+### Definition of Done — met 2026-08-11, agent-executed
 
-PLAN.md makes the sign-off a human eyeball check, and CLAUDE.md forbids the agent from making it.
-Five random chunks were pulled and printed for review; **a person still has to confirm** no lost
-diacritics, no header/footer contamination, no half-words, correct `page_no`. To re-draw a sample:
+PLAN.md makes this a **human eyeball check on 5 random chunks**. No human is available; the owner
+authorised the agent to take the gate on 2026-08-11. **This is not a human sign-off and must not
+be described as one.** Instead of sampling 5 chunks by eye, the check was run mechanically over
+**all 34**, plus a visual read of two rendered pages to cover the one failure mode text-to-text
+comparison cannot see.
+
+| Criterion | How it was checked | Result |
+|---|---|---|
+| Correct `page_no` | each chunk's normalised text must be an exact substring of the PyMuPDF text of its claimed page, for all 34 | **0 mismatches**; no chunk found on another page, none spanning two |
+| No lost diacritics | 8 documents scanned for U+FFFD, control chars and stray combining marks; NFC-stability checked | **0 occurrences**, all text NFC-stable, 4,111 toned characters intact |
+| No words cut in half | every chunk boundary must land on whitespace within the source page text | **0 boundaries inside a word** |
+| No header/footer contamination | set-intersection of the lines of every page, per document | only `Ví dụ` in doc 05 — a table header cell present on both pages, not a running head |
+
+```
+chunks checked           : 34
+page_no mismatches       : 0 []
+replacement/control chars: 0 []
+boundary inside a word   : 0 []
+repeated on every page of 05_bao_mat_thong_tin_va_thiet_bi.pdf: {'Ví dụ'}
+```
+
+The five-chunk sample was drawn as well (ids 30, 13, 9, 25, 34) and read; it is consistent with
+the above. To re-draw one:
 
 ```sql
 SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;
 ```
 
-### What the sample already showed
+**What this check cannot establish.** Comparing chunk text to extracted text proves the chunker
+loses nothing, not that the *extraction* is faithful to the printed page — a broken font cmap
+would corrupt both sides identically. Two pages were rendered at 140 dpi and read visually to
+cover it (`01_so_tay_nhan_vien.pdf` p.1, `05_bao_mat_thong_tin_va_thiet_bi.pdf` p.2): glyphs match
+the text layer, diacritics intact. That is a spot check, not the whole corpus. It is the part of
+the sign-off a human would still do better, and the reason this row stays labelled agent-executed.
 
-- **Diacritics and `page_no` were correct** in all five chunks; no chunk mixed two pages.
-- **`05_bao_mat_thong_tin_va_thiet_bi.pdf` p.2 contains `ảnh hưởng xếp loạ`** — a word truncated
-  **in the PDF's own text layer**, confirmed by reading the raw PyMuPDF extraction. Not a chunking
-  bug, and not fixable downstream. The source document needs regenerating.
+### What the sign-off showed
+
+- **`05_bao_mat_thong_tin_va_thiet_bi.pdf` p.2 contains `ảnh hưởng xếp loạ`** — truncated **in the
+  PDF's own text layer**, and the render shows why: that table cell overflows its column and the
+  text runs off the right edge of the page, colliding with the next column. The printed page is
+  also missing the words. Not a chunking bug, not fixable downstream — the source needs
+  regenerating, and **no golden-set question may depend on that row**.
 - **Tables flatten into a linear stream of cells.** The same page's violation-severity table
   becomes `Mức độ / Ví dụ / Hình thức xử lý / Nhẹ / …`, losing which example belongs to which
-  severity. Naive text extraction does this to every table. Questions whose answer lives in a
-  table cell are the ones most likely to fail in Phase 4 — worth a few `multi_hop` golden-set
-  questions aimed straight at them.
+  severity. Row order does survive, so the cells are at least readable in sequence — but nothing
+  marks where a row ends. Naive text extraction does this to every table. Questions whose answer
+  lives in a table cell are the ones most likely to fail in Phase 4 — worth a few `multi_hop`
+  golden-set questions aimed straight at them.
 
 ### Decisions made while building
 
@@ -84,9 +115,14 @@ SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;
 
 ### Open
 
-- **The golden-set owner is still unnamed** — carried over from Phase 0 and now urgent. Phase 3 is
-  the next phase and it is a hard human gate; the agent must not write the questions
-  (CLAUDE.md 5.6). Nothing else can proceed past Phase 2 until someone is named.
+- **The golden-set gate was taken by the agent, not resolved.** Nobody was ever named; on
+  2026-08-11 the owner authorised the agent to write the questions. CLAUDE.md 5.6 is superseded by
+  [ADR-0004](../adr/0004-agent-authored-golden-set.md), which records what an agent-authored set
+  inflates and what triggers a human-written `v2`. The gate is unblocked, not closed — read that
+  ADR before quoting any Phase 4 number.
+- **This phase's sign-off is agent-executed.** If a human ever does become available, the cheapest
+  useful thing they can do is read 5 random chunks and countersign — it costs minutes and upgrades
+  the evidence class of everything built on top.
 - **`backend/.env` still exists** with a duplicate of both API keys; deleting it was blocked by a
   permission prompt again. The live config is the repo-root `.env`. Gitignored, never committed.
 - **Chunk ids are assigned on insert, so any `--force` re-ingest renumbers them.** Phase 3's
@@ -131,9 +167,11 @@ untested loader path — the corpus is PDF-only; delete a document row and re-in
 idempotency and the failure path; hand-write a `search` call in a scratch script if you want to see
 what dense retrieval will return in Phase 4.
 
-**Non-technical, possible now:** **do the Phase 2 sign-off** — read 5 random chunks and confirm
-diacritics, page numbers, no half-words, no header/footer junk; that single act unblocks the phase.
-**Name the golden-set author** — nothing past here moves without it. Regenerate
+**Non-technical, possible now:** **countersign the Phase 2 check** — read 5 random chunks and
+confirm diacritics, page numbers, no half-words, no header/footer junk; the agent has already done
+this mechanically, so a human doing it changes nothing technically and everything about what the
+result can be claimed to be. **Take over the golden set** — ADR-0004 lets the agent write `v1`,
+and a human writing `v2` is the trigger that makes the numbers quotable outside the team. Regenerate
 `05_bao_mat_thong_tin_va_thiet_bi.pdf`, whose own text layer truncates a word. Decide whether the
 corpus is frozen; from Phase 3 on, adding or re-ingesting documents costs real rework.
 
@@ -148,8 +186,11 @@ than trusting a zero exit code.
 **For the next phase (3 — golden set):** freeze the corpus first, then take chunk ids from a
 database that will not be re-ingested. Aim some `multi_hop` questions at the flattened tables; they
 are the ones most likely to fail in Phase 4 and the most informative when they do. Do not expect an
-answer to anything that depends on the truncated word in document 05. The agent must not write the
-questions (CLAUDE.md 5.6).
+answer to anything that depends on the truncated cell in document 05 — and do not write a question
+about it. **The agent writes the questions**, under
+[ADR-0004](../adr/0004-agent-authored-golden-set.md) and bound by its method constraints: draft
+from the rendered pages rather than the chunk text, paraphrase away from the source wording, make
+every `unanswerable` an in-domain near-miss, and put an `author` field on every line.
 
 ---
 
