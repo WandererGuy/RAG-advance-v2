@@ -37,7 +37,7 @@ exist with a `.gitkeep` and stay empty. No empty `.py` files, no abstract classe
 |---|---|
 | 1 | `core/`, `db/`, `models/`, `main.py`, `alembic/`, `docker-compose.yml`, `Makefile` |
 | 2 | `llm/rag/{chunking,embedder,vector_store}.py`, `repositories/document_repo.py`, `services/ingest_service.py`, `scripts/ingest_corpus.py` |
-| 3 | `eval/datasets/` |
+| 3 | `eval/datasets/` (incl. `validate.py`, `corpus.lock.json`), `scripts/find_chunks.py` |
 | 4 | `llm/client.py`, `llm/prompts/`, `rag/retrievers/{base,dense}.py`, `rag/pipelines/{base,registry,naive_v1}.py`, `eval/{metrics,judge_prompts,runner,report}`, `results/` |
 | 5 | `api/v1/routes/{chat,documents}.py`, `api/deps.py`, `schemas/`, `services/chat_service.py`, `frontend/` |
 | 6 | `retrievers/{bm25,hybrid,reranker}.py`, `pipelines/hybrid_v2.py`, `.github/workflows/` |

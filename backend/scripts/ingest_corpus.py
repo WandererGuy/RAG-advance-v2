@@ -97,9 +97,10 @@ def _summarize(
         print(f"  FAILED  {result.path.name}: {result.error}", file=sys.stderr)
 
     if ingested:
-        print("\nnext: eyeball 5 random chunks — the Phase 2 Definition of Done needs a human")
-        print("  make psql")
-        print("  SELECT content, page_no FROM chunks ORDER BY random() LIMIT 5;")
+        # The corpus is frozen (ADR-0005): anything that wrote chunks may have just invalidated
+        # every relevant_chunk_ids in the golden set, and only the lock check will say so.
+        print("\nnext: confirm the golden set still points at the right chunks")
+        print("  make validate")
 
 
 def main(argv: list[str] | None = None) -> int:

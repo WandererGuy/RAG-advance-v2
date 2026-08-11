@@ -188,6 +188,9 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
 make up          # docker compose up -d (postgres + pgvector)
 make migrate     # alembic upgrade head
 make ingest      # python -m scripts.ingest_corpus --path data/raw
+make find Q="phụ cấp"
+                 # python -m scripts.find_chunks --q "…" — chunk ids for the golden set
+make validate    # python -m eval.datasets.validate — golden set + frozen corpus (ADR-0005)
 make api         # uvicorn app.main:app --reload
 make eval P=naive-v1
                  # python -m eval.runner --pipeline naive-v1

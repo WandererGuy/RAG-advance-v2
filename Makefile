@@ -1,4 +1,4 @@
-.PHONY: help up down logs psql install migrate revision api ingest test lint fmt
+.PHONY: help up down logs psql install migrate revision api ingest find validate test lint fmt
 .DEFAULT_GOAL := help
 
 BACKEND := backend
@@ -34,11 +34,17 @@ api:  ## run the API with reload
 ingest:  ## ingest the corpus: make ingest [P=../data/raw] [FORCE=1]
 	cd $(BACKEND) && $(UV) run python -m scripts.ingest_corpus --path $(or $(P),../data/raw) $(if $(FORCE),--force,)
 
+find:  ## look up chunk ids for the golden set: make find Q="phụ cấp"
+	cd $(BACKEND) && $(UV) run python -m scripts.find_chunks --q "$(Q)"
+
+validate:  ## validate the golden set + the frozen corpus lock
+	cd $(BACKEND) && $(UV) run python -m eval.datasets.validate
+
 test:  ## pytest
 	cd $(BACKEND) && $(UV) run pytest
 
 lint:  ## ruff + mypy
-	cd $(BACKEND) && $(UV) run ruff check . && $(UV) run mypy app
+	cd $(BACKEND) && $(UV) run ruff check . && $(UV) run mypy app eval scripts
 	cd $(BACKEND) && $(UV) run ruff format --check .
 
 fmt:  ## ruff format + autofix

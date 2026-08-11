@@ -31,6 +31,33 @@ class ChunkHit:
     score: float
 
 
+@dataclass(frozen=True)
+class ChunkMatch:
+    """One row from the keyword lookup used to write the golden set.
+
+    Deliberately not a ChunkHit: there is no similarity score here and inventing one would
+    invite someone to compare a keyword match against a retrieval score.
+    """
+
+    chunk_id: int
+    filename: str
+    page_no: int | None
+    chunk_index: int
+    content: str
+
+
+@dataclass(frozen=True)
+class CorpusChunkRow:
+    """A chunk reduced to what the corpus lock needs to detect a re-ingest."""
+
+    chunk_id: int
+    file_hash: str
+    filename: str
+    page_no: int | None
+    chunk_index: int
+    content: str
+
+
 class DocumentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -126,6 +153,76 @@ class DocumentRepository:
             statement = statement.where(Chunk.document_id == document_id)
         result = await self._session.execute(statement)
         return int(result.scalar_one())
+
+    async def search_text(
+        self, terms: Sequence[str], *, limit: int = 20, filename_like: str | None = None
+    ) -> list[ChunkMatch]:
+        """Chunks containing **every** term, case-insensitively. Not a retriever.
+
+        This exists so a golden-set writer can find the chunk id behind a policy sentence
+        (Phase 3). ILIKE, not tsvector: Postgres has no Vietnamese text-search configuration,
+        so `to_tsvector` would stem Vietnamese as if it were English and quietly return the
+        wrong rows. A substring match is the honest primitive here.
+        """
+        statement = (
+            select(
+                Chunk.id,
+                Document.filename,
+                Chunk.page_no,
+                Chunk.chunk_index,
+                Chunk.content,
+            )
+            .join(Document, Document.id == Chunk.document_id)
+            .order_by(Document.filename, Chunk.chunk_index)
+            .limit(limit)
+        )
+        for term in terms:
+            statement = statement.where(Chunk.content.ilike(f"%{term}%"))
+        if filename_like:
+            statement = statement.where(Document.filename.ilike(f"%{filename_like}%"))
+
+        result = await self._session.execute(statement)
+        return [
+            ChunkMatch(
+                chunk_id=row.id,
+                filename=row.filename,
+                page_no=row.page_no,
+                chunk_index=row.chunk_index,
+                content=row.content,
+            )
+            for row in result.all()
+        ]
+
+    async def all_chunks_for_lock(self) -> list[CorpusChunkRow]:
+        """Every chunk with its document's file_hash, ordered deterministically.
+
+        Feeds `eval/datasets/corpus.lock.json`. Ordered by (file_hash, chunk_index) rather than
+        by id so the lock's own digest does not change just because ids were reassigned — the
+        id list is compared separately and on purpose.
+        """
+        result = await self._session.execute(
+            select(
+                Chunk.id,
+                Document.file_hash,
+                Document.filename,
+                Chunk.page_no,
+                Chunk.chunk_index,
+                Chunk.content,
+            )
+            .join(Document, Document.id == Chunk.document_id)
+            .order_by(Document.file_hash, Chunk.chunk_index)
+        )
+        return [
+            CorpusChunkRow(
+                chunk_id=row.id,
+                file_hash=row.file_hash,
+                filename=row.filename,
+                page_no=row.page_no,
+                chunk_index=row.chunk_index,
+                content=row.content,
+            )
+            for row in result.all()
+        ]
 
     async def search_similar(
         self, embedding: Sequence[float], top_k: int, *, document_ids: Sequence[int] | None = None

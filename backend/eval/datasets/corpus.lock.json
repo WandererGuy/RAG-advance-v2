@@ -1,0 +1,97 @@
+{
+  "note": "Frozen corpus for eval/datasets/*.jsonl. relevant_chunk_ids are only meaningful against this exact state — see ADR-0005.",
+  "chunk_count": 34,
+  "corpus_digest": "6d1fe4a9e0e195b617598c10d7060e5746201edd0f12748fbe2bcb650f7b40ee",
+  "documents": [
+    {
+      "filename": "01_so_tay_nhan_vien.pdf",
+      "file_hash": "36aea62761a893db61f76c56ec605104b61da8ec2c506b85e135af42c6174d62",
+      "chunk_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
+      "file_hash": "8f31c4e7920be515400d17f51cd7bbb18b37cec4ee8cd52aa364d23bba91a133",
+      "chunk_ids": [
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "03_khung_cap_bac_va_danh_gia.pdf",
+      "file_hash": "d59db6f2e70fa47641ecd9a5b782204d1c8ce00a2baa80935f47e42dc744e33f",
+      "chunk_ids": [
+        10,
+        11,
+        12,
+        13
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
+      "file_hash": "c4744145710e0c88ef2edacae83f9d20a92936fe6262a3b06c82c70216c817a5",
+      "chunk_ids": [
+        14,
+        15,
+        16,
+        17
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "05_bao_mat_thong_tin_va_thiet_bi.pdf",
+      "file_hash": "a55b72b5d6cc4e828b136206c824d1f4d3f8470b12f035ede6aeb8ed69606421",
+      "chunk_ids": [
+        18,
+        19,
+        20,
+        21
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "06_tuyen_dung_va_thu_viec.pdf",
+      "file_hash": "3672ed68a996a149076ed4c10a48eec5d5e1b344142aa4f836e38544179d24a3",
+      "chunk_ids": [
+        22,
+        23,
+        24,
+        25
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "07_quy_tac_ung_xu.pdf",
+      "file_hash": "71ee9076e6ff29791996658febf7acdea24333741d4f4587966b9a544e35b3df",
+      "chunk_ids": [
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "digest": ""
+    },
+    {
+      "filename": "08_cong_tac_phi.pdf",
+      "file_hash": "84d48ba04373ae77a7b49bf46243526a6f382f57c49134372fa608174494a6c1",
+      "chunk_ids": [
+        31,
+        32,
+        33,
+        34
+      ],
+      "digest": ""
+    }
+  ]
+}
