@@ -60,7 +60,7 @@ Four rows below were superseded during Phase 0 by
 | PDF | PyMuPDF (`fitz`) — accurate page numbers required | same |
 | DOCX | `python-docx` | same |
 | Embedding | `text-embedding-3-small` (1536 dim) | **`gemini-embedding-001`, 768 dim**, read from `.env` |
-| LLM | read from env, defaults to `claude-sonnet-4-6` | read from `.env`, currently **`gemini-2.5-flash`** via LiteLLM |
+| LLM | read from env, defaults to `claude-sonnet-4-6` | read from `.env`, currently **`gemini-3.6-flash`** via LiteLLM ([ADR-0007](docs/adr/0007-llm-model-migration-to-gemini-3-6-flash.md); `gemini-2.5-flash` was retired by the provider mid-Phase-4). Never a moving alias |
 | Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames | same |
 | Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) | same |
 | Test | pytest | same (+ `pytest-asyncio`) |

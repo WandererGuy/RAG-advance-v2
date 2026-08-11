@@ -49,3 +49,8 @@ See `docs/adr/`. Every trade-off gets one ADR — the argument does not live in 
 
 - [ADR-0001](adr/0001-scope-va-data-boundary.md) — scope and data boundary
 - [ADR-0002](adr/0002-tech-stack-resolution.md) — resolving the stack conflict between CLAUDE.md, PLAN.md and `.env`
+- [ADR-0003](adr/0003-vector-store-over-repository.md) — the vector store as an adapter over the repository
+- [ADR-0004](adr/0004-agent-authored-golden-set.md) — the golden set is agent-authored, and what that inflates
+- [ADR-0005](adr/0005-frozen-corpus-for-the-golden-set.md) — the corpus is frozen and the freeze is machine-checked
+- [ADR-0006](adr/0006-how-generation-is-scored.md) — a self-grading judge, and a refusal that is not judged
+- [ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md) — the answering model is pinned, never an alias

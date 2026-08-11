@@ -1,4 +1,4 @@
-.PHONY: help up down logs psql install migrate revision api ingest find validate test lint fmt
+.PHONY: help up down logs psql install migrate revision api ingest find validate eval report test lint fmt
 .DEFAULT_GOAL := help
 
 BACKEND := backend
@@ -39,6 +39,12 @@ find:  ## look up chunk ids for the golden set: make find Q="phụ cấp"
 
 validate:  ## validate the golden set + the frozen corpus lock
 	cd $(BACKEND) && $(UV) run python -m eval.datasets.validate
+
+eval:  ## run a pipeline over the golden set: make eval P=naive-v1 [ARGS="--overwrite"]
+	cd $(BACKEND) && $(UV) run python -m eval.runner --pipeline $(or $(P),naive-v1) $(ARGS)
+
+report:  ## rebuild results/leaderboard.md from every results/*.json
+	cd $(BACKEND) && $(UV) run python -m eval.report
 
 test:  ## pytest
 	cd $(BACKEND) && $(UV) run pytest

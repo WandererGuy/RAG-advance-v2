@@ -21,6 +21,9 @@ dependencies = [
     "python-docx>=1.1",
     "tiktoken>=0.8",
     "tqdm>=4.67",
+    # Phase 4: prompt templates. LiteLLM already pulls Jinja2 in, but the prompts are ours and
+    # a transitive dependency is not a contract.
+    "jinja2>=3.1",
 ]
 
 [project.optional-dependencies]

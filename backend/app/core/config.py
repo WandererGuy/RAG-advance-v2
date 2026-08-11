@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # --- LLM, via LiteLLM. Provider is never hardcoded; see ADR-0002. ---
     default_llm_provider: str = "GEMINI"
-    default_llm_model_name: str = "gemini-2.5-flash"
+    default_llm_model_name: str = "gemini-3.6-flash"
     default_llm_api_key: str = ""
     default_llm_api_base: str = ""
     default_llm_custom_provider: str = ""
@@ -57,7 +57,7 @@ class Settings(BaseSettings):
 
     @property
     def llm_model(self) -> str:
-        """LiteLLM model identifier, e.g. "gemini/gemini-2.5-flash"."""
+        """LiteLLM model identifier, e.g. "gemini/gemini-3.6-flash"."""
         return f"{self.default_llm_provider.lower()}/{self.default_llm_model_name}"
 
     @property

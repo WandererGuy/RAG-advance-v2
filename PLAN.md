@@ -14,7 +14,8 @@ After each phase: run the Definition of Done → report → wait for confirmatio
 **Tech stack — resolved, see [ADR-0002](docs/adr/0002-tech-stack-resolution.md):** uv, Python 3.12 +
 FastAPI, PostgreSQL 16 + pgvector accessed **asynchronously** (SQLAlchemy 2.x async + `asyncpg`),
 Alembic, LiteLLM as the provider wrapper, PyMuPDF for PDF. **LLM and embedding models are read from
-`.env`** — currently Gemini (`gemini-2.5-flash`, `gemini-embedding-001` at 768 dim); nothing about
+`.env`** — currently Gemini (`gemini-3.6-flash` per [ADR-0007](docs/adr/0007-llm-model-migration-to-gemini-3-6-flash.md),
+`gemini-embedding-001` at 768 dim); nothing about
 the provider is hardcoded.
 
 Extras (Celery + Redis for background jobs, Chonkie for chunking, LangChain / LangGraph for

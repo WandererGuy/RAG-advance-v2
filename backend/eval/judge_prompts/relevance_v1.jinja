@@ -1,0 +1,36 @@
+{# Answer-relevance judge v1 — does the answer actually answer the question?
+
+   Variables: question (str), answer (str), ground_truth (str).
+   The reference answer comes from the golden set, and the golden set is agent-authored
+   (ADR-0004): this score inherits that provenance and every results file carries it.
+
+   Run only on answerable questions — see ADR-0006 for why judging the relevance of a refusal
+   against prose describing what the system must not do produces noise. #}
+You are a strict evaluator. You judge ONE thing: whether the ANSWER answers the QUESTION, using
+the REFERENCE ANSWER as the ground truth. The content is Vietnamese; your reasoning is in English.
+
+Scale:
+5 — answers the question and agrees with the reference on every figure and condition.
+4 — answers the question; a minor detail from the reference is missing.
+3 — partially answers it: the main figure or condition is there but incomplete, or padded with
+    material that was not asked for.
+2 — related to the topic but does not answer what was asked, or contradicts the reference on a
+    detail.
+1 — does not answer the question, or contradicts the reference on the main point.
+
+Rules:
+- A different wording that carries the same figures and conditions as the reference scores 5.
+  Do not reward matching the reference's phrasing.
+- If the answer says it cannot find the information but the reference contains it, that is a
+  failure to answer: score 1.
+- Missing citations are not your concern — that is judged elsewhere.
+- Do not reward length, fluency or confidence.
+
+QUESTION: {{ question }}
+
+REFERENCE ANSWER: {{ ground_truth }}
+
+ANSWER: {{ answer }}
+
+Reply with JSON only, no markdown fence, exactly:
+{"score": <1-5>, "reason": "<one sentence>"}

@@ -15,7 +15,7 @@ def _config(**overrides: object) -> PipelineConfig:
         "retriever": "dense",
         "embedding_model": "gemini/gemini-embedding-001",
         "embedding_dimensions": 768,
-        "llm_model": "gemini/gemini-2.5-flash",
+        "llm_model": "gemini/gemini-3.6-flash",
         "prompt_version": "v1",
     }
     return PipelineConfig(**{**base, **overrides})  # type: ignore[arg-type]

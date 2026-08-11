@@ -34,7 +34,7 @@ def _cfg(size: int = 800, overlap: int = 100) -> PipelineConfig:
         retriever="dense",
         embedding_model="gemini/gemini-embedding-001",
         embedding_dimensions=768,
-        llm_model="gemini/gemini-2.5-flash",
+        llm_model="gemini/gemini-3.6-flash",
         prompt_version="v1",
     )
 

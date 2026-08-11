@@ -23,7 +23,7 @@ document-level permissions, OCR, Qdrant.
 
 Python 3.12 (`uv`) · FastAPI · PostgreSQL 16 + pgvector, async via SQLAlchemy 2.x + `asyncpg` ·
 Alembic · PyMuPDF · LiteLLM, with the LLM and embedding model read from `.env` — currently Gemini
-(`gemini-2.5-flash`, `gemini-embedding-001` at 768 dim) · Jinja2 prompts · pytest.
+(`gemini-3.6-flash`, `gemini-embedding-001` at 768 dim) · Jinja2 prompts · pytest.
 
 Celery + Redis, Chonkie and LangChain / LangGraph are deliberately not in v1; they can be added
 later. See [ADR-0002](docs/adr/0002-tech-stack-resolution.md) for the reasoning and the trigger for
@@ -31,9 +31,11 @@ revisiting each.
 
 ## How to run
 
-Phases 0–2 are done: the database, the schema, the health endpoint and synchronous ingest work.
-There is no chat endpoint yet — that is Phase 5, and the only route the API serves today is
-`/api/v1/health`.
+Phases 0–3 are done: the database, the schema, the health endpoint, synchronous ingest, and a
+29-question golden set over a frozen corpus. Phase 4's code is complete — `naive-v1` retrieves,
+answers with citations, and is scored by `make eval` — but **no baseline number has been committed
+yet**; the provider's free tier cannot fit one evaluation run in a day. There is no chat endpoint
+yet — that is Phase 5, and the only route the API serves today is `/api/v1/health`.
 
 ### To run it right now
 
@@ -58,11 +60,16 @@ make api
 ```
 
 All targets run from the repository root — the Makefile handles the `cd backend`. Also available:
-`make test`, `make lint`, `make psql`, `make logs`, `make down`, and `make ingest FORCE=1` to
-re-ingest. Later phases add `make eval P=naive-v1` and `make report`.
+`make validate` (golden set + frozen corpus), `make find Q="…"`, `make eval P=naive-v1`,
+`make report`, `make test`, `make lint`, `make psql`, `make logs`, `make down`, and
+`make ingest FORCE=1` to re-ingest.
 
-`make ingest FORCE=1` reassigns chunk ids, which invalidates the Phase 3 golden set's
-`relevant_chunk_ids`. Freeze the corpus before that golden set is written.
+`make ingest FORCE=1` reassigns chunk ids, which invalidates the golden set's
+`relevant_chunk_ids`. The corpus is frozen and `make validate` now fails loudly when that happens
+— see [ADR-0005](docs/adr/0005-frozen-corpus-for-the-golden-set.md).
+
+`make eval` calls the provider roughly three times per question (one answer, two judgements).
+On the Gemini free tier that is more than a day's quota for one run.
 
 Progress index: [docs/progress.md](docs/progress.md) — phase status, what is blocked on a human,
 and a link to the per-phase entry in [docs/progress/](docs/progress/) holding the verification

@@ -1,0 +1,39 @@
+{# Faithfulness judge v1 — does the answer stay inside the retrieved context?
+
+   Variables: question (str), answer (str), chunks (list of RetrievedChunk).
+   Judges grounding ONLY. Whether the answer is correct or useful is relevance's job; a judge
+   asked for both collapses them into one vague impression.
+
+   English instructions over Vietnamese content on purpose: the content is Vietnamese and the
+   rubric must not be mistaken for part of it. Frozen once results exist — new rubric, new file. #}
+You are a strict evaluator. You judge ONE thing: whether the ANSWER is fully supported by the
+CONTEXT below. The content is Vietnamese; your reasoning is in English.
+
+Scale:
+5 — every claim in the answer is stated in the context. Nothing added.
+4 — every claim is supported; some rewording goes slightly beyond the wording of the context.
+3 — mostly supported, but at least one detail (a number, a condition, a deadline) is not in
+    the context.
+2 — a substantial part of the answer is not supported by the context.
+1 — the answer contradicts the context, or invents facts, figures or sources wholesale.
+
+Rules:
+- Judge grounding, not correctness. A claim you know to be true in the real world but absent
+  from the context is UNSUPPORTED and must lower the score.
+- An answer that says it cannot find the information in the documents is fully faithful: 5.
+- Citations in the form [file, p.N] must point at a source present in the context. A citation
+  naming a file or page that is not below is fabricated: score 1.
+- Do not reward length, fluency or confidence.
+
+CONTEXT:
+{% for c in chunks %}
+--- [{{ c.filename }}, p.{{ c.page_no if c.page_no is not none else '?' }}] ---
+{{ c.content }}
+
+{% endfor %}
+QUESTION: {{ question }}
+
+ANSWER: {{ answer }}
+
+Reply with JSON only, no markdown fence, exactly:
+{"score": <1-5>, "reason": "<one sentence, naming the unsupported claim if there is one>"}

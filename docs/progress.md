@@ -13,7 +13,7 @@ to know.
 | 1 — Infrastructure + schema | ✅ done | [progress/phase-1.md](progress/phase-1.md) |
 | 2 — Synchronous ingest | ✅ done — sign-off **agent-executed**, not human-signed | [progress/phase-2.md](progress/phase-2.md) |
 | 3 — Golden set | ✅ done — questions **agent-authored** ([ADR-0004](adr/0004-agent-authored-golden-set.md)) | [progress/phase-3.md](progress/phase-3.md) |
-| 4 — `naive-v1` baseline | ⬜ not started | — |
+| 4 — `naive-v1` baseline | 🟨 code complete — **no number committed yet**, blocked on provider quota | [progress/phase-4.md](progress/phase-4.md) |
 | 5 — API + thin frontend | ⬜ not started | — |
 | 6 — Improvements | ⬜ not started | — |
 
@@ -22,8 +22,20 @@ to know.
 The corpus is ingested and now **frozen** ([ADR-0005](adr/0005-frozen-corpus-for-the-golden-set.md)):
 8 documents, 34 chunks, 768-dim embeddings, idempotent on re-run. `eval/datasets/golden_qa.v1.jsonl`
 holds 29 questions with verified chunk citations. The build is green (`make lint`, `make validate`,
-`make test` → 52 passed). Phase 4 is next and nothing blocks it: `naive-v1`, the dense retriever,
-the runner and the first numbers in `results/`.
+`make test` → 131 passed).
+
+Phase 4's code is complete and proven end to end against the real corpus and the real provider —
+`naive-v1`, the dense retriever, the judge, the runner and the leaderboard all run — but **no
+number has been committed**. `results/` still holds only `.gitkeep`. The provider's free tier
+allows 20 generate-content requests per day per model and one full run needs about 82, so the
+baseline run stopped at question 10 of 29 and nothing partial was saved. Clearing that quota and
+running `make eval P=naive-v1` is the single remaining task of the phase, and Phase 5 should not
+start before it lands.
+
+Mid-phase the provider retired the configured `gemini-2.5-flash` (404, "no longer available to new
+users"); the answering model is now `gemini-3.6-flash`, pinned and never an alias
+([ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md)). Embeddings were unaffected, so
+the corpus and every chunk id survived untouched.
 
 ## Gates taken by the agent — read before quoting anything
 
@@ -45,9 +57,13 @@ because no human was available. Neither is human-signed, and the distinction is 
 
 ## Still blocked on a human
 
+- **The provider quota, and therefore the entire Phase 4 baseline.** The free tier cannot complete
+  one evaluation run in a day (20 requests/day/model vs ~82 needed). The project owner has said
+  they will clear it. Until then no score of this system exists. ([phase-4](progress/phase-4.md))
 - **`backend/.env` is redundant and still on disk** with a duplicate of both API keys. The live
   config is the repo-root `.env`. Deleting it has been blocked by a permission prompt twice. It is
-  gitignored and was never committed.
+  gitignored and was never committed. **As of Phase 4 it also holds a stale model name**, which
+  would resurrect the retired-model 404 for anyone whose tooling reads it.
 
 ## Carried-over open items
 
@@ -58,6 +74,15 @@ Full detail in each phase entry; these are the ones that will bite a later phase
   `eval/datasets/corpus.lock.json` and `make validate` fails loudly, naming what happened
   ([ADR-0005](adr/0005-frozen-corpus-for-the-golden-set.md)). Recovery still means looking every
   affected id up again. ([phase-3](progress/phase-3.md))
+- **Every generation score is self-graded** — one provider is configured, so the judge is the
+  answering model ([ADR-0006](adr/0006-how-generation-is-scored.md)). `faithfulness` and
+  `answer_relevance` are biased upward; `refusal_accuracy` and every retrieval metric are
+  deterministic and are not. The ADR names the triggers for adding an independent judge.
+  ([phase-4](progress/phase-4.md))
+- **A model alias is never permitted in `LLM_MODEL`** — `gemini-flash-latest` and friends change
+  silently under a frozen pipeline, and the results file would then name a configuration that no
+  longer identifies what ran ([ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md)).
+  Expect the pinned model to be retired in turn; the 404 is information, not a bug.
 - **The `unanswerable` questions and the flattened tables are the two things to watch in Phase 4.**
   `q021` and `q024` aim straight at table content that extraction linearises; a confident answer to
   `q025`–`q029` is a hallucination, not a pass. ([phase-3](progress/phase-3.md))
