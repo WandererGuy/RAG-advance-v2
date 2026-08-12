@@ -32,3 +32,6 @@ venv/
 
 # scratch
 .DS_Store
+
+# runtime pidfiles + logs from scripts/start.sh
+.run/
