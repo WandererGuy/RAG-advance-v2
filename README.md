@@ -1,60 +1,134 @@
 # rag-chatbot
 
-Q&A over internal company documents. Users ask in Vietnamese; the system answers **with citations**
-(document name + page number).
+Q&A over internal company documents: users ask in Vietnamese, the system answers **with citations**
+(document name + page number), or explicitly refuses when the documents do not contain the answer.
 
-The corpus for v1 is 8 Vietnamese HR policy documents (handbook, compensation, grading, leave and
-remote work, information security, hiring, code of conduct, travel expenses).
+The v1 corpus is 8 Vietnamese HR documents (employee handbook, compensation and benefits, grading,
+leave and remote work, information security, hiring, code of conduct, travel expenses) — 16 pages,
+34 chunks. These are **synthetic** demo documents for a fictional company, not real data, so they
+are committed to the repo at [data/raw/HR_pdfs/](data/raw/HR_pdfs/) and are safe to open, quote and
+share ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md)).
 
-These 8 PDFs are **synthetic demo documents** for a fictional company — not real company data — so
-they are **committed to the repository** in [data/raw/HR_pdfs/](data/raw/HR_pdfs/) and are safe to
-open, show and share ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md)). Clone the repo and
-`make ingest` works with no document hunting. The rest of `data/raw/` stays gitignored, so real
-documents added later are not committed by accident.
+Vietnamese version: [README.vi.md](README.vi.md).
 
-## Scope
+## Example
 
-**In scope for v1 (Phases 0–5)**
+Both examples below are real output, taken from [results/naive-v1.json](results/naive-v1.json) — the
+committed `naive-v1` run over the whole golden set.
 
-- Text-based PDF and DOCX
-- Single-turn questions — no auth, no permissions
-- An answer plus citations, or an explicit "no information found in the documents"
-- Synchronous ingest
+```
+Q:        Buổi sáng muộn nhất mấy giờ thì mọi người phải có mặt?
+          ("What is the latest anyone has to be in, in the morning?")
+A:        10:00 là giờ muộn nhất phải có mặt trong khung giờ bắt buộc (core hours).
+          [01_so_tay_nhan_vien.pdf, p.1]
+Citation: 01_so_tay_nhan_vien.pdf, page 1 (chunk 2) — supported: true
+Latency:  retrieval 377 ms · generation 1427 ms
+```
 
-**Out of scope for v1** — these directories exist but stay empty until there is a concrete reason
-and an ADR: async workers, multi-turn memory, function calling, conversation endpoints, streaming,
-document-level permissions, OCR, Qdrant.
+The case where the documents hold no answer — the system **refuses** rather than guessing:
+
+```
+Q:        Mỗi tháng được hỗ trợ bao nhiêu tiền bữa trưa?
+          ("How much lunch allowance is there per month?")
+A:        Không tìm thấy thông tin trong tài liệu.
+          ("No information found in the documents.")
+Citation: (none)
+```
+
+That refusal sentence is a **fixed string** (`REFUSAL_MARKER` in
+[backend/app/llm/rag/pipelines/base.py](backend/app/llm/rag/pipelines/base.py)), injected into the
+prompt and matched back by `is_refusal()`. The safety-critical metric of this project does not
+depend on a model's judgement.
+
+## Status
+
+Phases 0–4 are done. Phase 5's code is done and waits on a human gate.
+
+- Working today: synchronous ingest, dense retrieval, `make eval` over the 29-question golden set,
+  and an API serving `POST /api/v1/chat`, `POST /api/v1/documents`, `GET /api/v1/documents`,
+  `GET /api/v1/health`, plus a Streamlit page (`make ui`).
+- The `naive-v1` baseline **is committed**: `results/naive-v1.json` and `results/leaderboard.md`.
+- Not built: multi-turn memory, function calling, streaming, async workers, auth, OCR, reranking,
+  hybrid retrieval — all Phase 6 and later.
+- Phase 5's Definition of Done is open: PLAN.md asks that someone outside the team click through the
+  UI without instructions, and nobody has ([docs/progress/phase-5.md](docs/progress/phase-5.md)).
+
+## How it works
+
+`PDF/DOCX → parse → chunk → embed → pgvector → retrieve top-k → prompt → answer + citations`
+
+- **Character-window chunking, `chunk_size=800` / `chunk_overlap=100`**, not token-based. Each page
+  is chunked on its own, so **a chunk never spans a page break** — that is precisely why a citation
+  carries an exact page rather than a guess. Cut points snap backwards to the nearest paragraph →
+  sentence → line → word boundary, so no chunk ends mid-word
+  ([chunking.py](backend/app/llm/rag/chunking.py)).
+- **Page numbers survive the whole pipeline**: `Page.page_no` (1-based, PyMuPDF) → `TextChunk.page_no`
+  → the `chunks.page_no` column → `c.page_no` in the prompt → the `[filename, p.N]` string in the
+  answer → `parse_citations()` reading it back and resolving it against the chunks actually
+  retrieved. A citation naming a source that was never retrieved is counted as `unsupported`.
+- **Retrieval is pure dense, top_k=5, cosine distance** over pgvector with an HNSW index
+  (`vector_cosine_ops`, `m=16`, `ef_construction=64`). No reranking, no hybrid, no metadata filter,
+  no score threshold — `naive-v1` is deliberately the dumbest possible reference point
+  ([dense.py](backend/app/llm/rag/retrievers/dense.py)).
+- **The prompt forces citations and forces refusal**: `answer_v1.jinja` states five binding rules —
+  use only the DOCUMENTS section, cite `[filename, p.N]` after every claim, and when the context is
+  insufficient reply with **exactly one sentence**, `Không tìm thấy thông tin trong tài liệu.`, and
+  nothing else. When retrieval returns nothing the LLM is not called at all: refusal is the only
+  correct output.
+- **Vietnamese-specific handling**: the sentence-splitting regex requires a terminator to be
+  **followed by whitespace**, so "6.3. Trong thời gian" is not cut inside the clause number; and
+  `is_refusal()` normalises Unicode before matching, so a decomposed diacritic never decides a metric.
+
+## Evaluation
+
+A 29-question golden set ([backend/eval/datasets/golden_qa.v1.jsonl](backend/eval/datasets/golden_qa.v1.jsonl))
+over a **frozen** corpus ([ADR-0005](docs/adr/0005-frozen-corpus-for-the-golden-set.md)): 16
+`factual`, 8 `multi_hop`, 5 `unanswerable`. Every line carries verified `relevant_chunk_ids` and a
+mandatory `author` field.
+
+- **Retrieval (arithmetic, not model-scored):** `recall@5`, `MRR`, `nDCG@5`, over the 24 answerable
+  questions only.
+- **Generation (LLM-as-judge, 1–5):** `faithfulness` scores every question — is the answer fully
+  contained in the context it was given — while `answer_relevance` scores only answerable ones
+  against `ground_truth`. The judge returns JSON; a parse failure records `None`, never a default
+  score.
+- **Refusal and citations (arithmetic):** `refusal_accuracy`, `over_refusal_rate`, `citation_rate`,
+  `unsupported_citations`.
+- **~3 provider calls per question**: one answer, one faithfulness judgement, one relevance
+  judgement (`unanswerable` questions skip relevance, so they cost two). About 82 calls per
+  29-question run.
+
+The committed `naive-v1` numbers — read [ADR-0004](docs/adr/0004-agent-authored-golden-set.md)
+**before** quoting any of them:
+
+| recall@5 | MRR | nDCG@5 | faithful | relevance | refusal | cite ok | p50 |
+|---|---|---|---|---|---|---|---|
+| 0.958 | 0.840 | 0.857 | 4.897 | 4.250 | 1.000 | 1.000 | 2009 ms |
+
+Two limits go with them. The 29 questions were **written by the agent, not a human** — retrieval
+metrics are inflated most by this. And the **judge is the answering model** (one provider is
+configured), so `faithfulness` and `answer_relevance` are self-graded and biased upward
+([ADR-0006](docs/adr/0006-how-generation-is-scored.md)). The retrieval and refusal columns are
+deterministic and are not. Relative comparison between pipelines is valid; the absolute values are
+not.
 
 ## Stack
 
 Python 3.12 (`uv`) · FastAPI · PostgreSQL 16 + pgvector, async via SQLAlchemy 2.x + `asyncpg` ·
-Alembic · PyMuPDF · LiteLLM, with the LLM and embedding model read from `.env` — currently OpenAI
-(`gpt-5.6-luna`, `text-embedding-3-large` at 768 dim) · Jinja2 prompts · pytest.
+Alembic · PyMuPDF (PDF) / `python-docx` (DOCX) · LiteLLM with the models read from `.env` — currently
+OpenAI `gpt-5.6-luna` for generation and `text-embedding-3-large` at **768 dimensions** (native
+truncation) · Jinja2 prompts versioned in the filename · Streamlit for the demo UI · pytest.
 
-Celery + Redis, Chonkie and LangChain / LangGraph are deliberately not in v1; they can be added
-later. See [ADR-0002](docs/adr/0002-tech-stack-resolution.md) for the reasoning and the trigger for
+Models are **pinned, never a moving alias** — an alias changes silently underneath a frozen
+pipeline, and the results file would then name a configuration that no longer identifies what ran.
+`gpt-5.6-luna` rejects `temperature=0`, so the parameter is omitted and results record
+`temperature: null` ([ADR-0008](docs/adr/0008-provider-migration-to-openai.md)).
+
+Celery + Redis, Chonkie and LangChain / LangGraph are **deliberately not in v1**.
+[ADR-0002](docs/adr/0002-tech-stack-resolution.md) records the reasoning and a named trigger for
 revisiting each.
 
-## How to run
-
-Phases 0–3 are done: the database, the schema, the health endpoint, synchronous ingest, and a
-29-question golden set over a frozen corpus. Phase 4's code is complete — `naive-v1` retrieves,
-answers with citations, and is scored by `make eval` — but **no baseline number has been committed
-yet**; the provider's free tier cannot fit one evaluation run in a day. There is no chat endpoint
-yet — that is Phase 5, and the only route the API serves today is `/api/v1/health`.
-
-### To run it right now
-
-On a machine where the stack is already provisioned — postgres up, venv synced, migrations
-applied, corpus ingested:
-
-```bash
-make up      # postgres is probably already up; this is a no-op safety check
-make api     # uvicorn on :8000, with reload
-curl localhost:8000/api/v1/health   # -> {"status":"ok","database":"up"}
-```
-
-### From scratch on a fresh machine
+## Running it
 
 ```bash
 cp .env.example .env    # fill DEFAULT_LLM_API_KEY + EMBEDDING_API_KEY (OpenAI)
@@ -62,38 +136,45 @@ make install            # uv sync --extra dev
 make up                 # docker compose up -d --wait
 make migrate            # alembic upgrade head
 make ingest             # defaults to --path ../data/raw
-make api
+make api                # uvicorn on :8000 — add `make ui` in another terminal for Streamlit
 ```
 
-All targets run from the repository root — the Makefile handles the `cd backend`. Also available:
-`make validate` (golden set + frozen corpus), `make find Q="…"`, `make eval P=naive-v1`,
-`make report`, `make test`, `make lint`, `make psql`, `make logs`, `make down`, and
-`make ingest FORCE=1` to re-ingest.
+Every target runs from the repository root; the Makefile handles the `cd backend`.
 
-After changing the embedding model, use `make reembed` — **not** `make ingest FORCE=1`. It
-re-embeds every chunk in place, so chunk ids and the corpus lock survive
-([ADR-0008](docs/adr/0008-provider-migration-to-openai.md)).
+## Scope
 
-`make ingest FORCE=1` reassigns chunk ids, which invalidates the golden set's
-`relevant_chunk_ids`. The corpus is frozen and `make validate` now fails loudly when that happens
-— see [ADR-0005](docs/adr/0005-frozen-corpus-for-the-golden-set.md).
+**In scope for v1 (Phases 0–5):** text-based PDF and DOCX · single-turn questions, no auth, no
+permissions · an answer with citations or an explicit refusal · synchronous ingest · every question
+recorded to the `queries` table.
 
-`make eval` calls the provider roughly three times per question (one answer, two judgements) —
-about 82 calls for the 29-question golden set, on a metered OpenAI key.
+**Out of scope for v1:** async workers, conversation memory, function calling, streaming,
+document-level permissions, OCR, Qdrant. Those directories exist but stay empty until there is a
+concrete reason and an ADR.
 
-Progress index: [docs/progress.md](docs/progress.md) — phase status, what is blocked on a human,
-and a link to the per-phase entry in [docs/progress/](docs/progress/) holding the verification
-evidence.
-
-## How the project is organised
-
-Read [CLAUDE.md](CLAUDE.md) for the working rules, [PLAN.md](PLAN.md) for the phase-by-phase
-roadmap, and [docs/architecture.md](docs/architecture.md) for the layering and the phase →
-directory map.
-
-Two rules matter more than the rest:
+## Working rules
 
 1. **A pipeline with committed results is frozen.** New idea → new pipeline file, new name. Editing
-   one after `results/<name>.json` is committed destroys comparability between runs.
-2. **Every number goes into `results/*.json` and gets committed** — including the bad ones. Negative
-   results are information.
+   `naive_v1.py` (or `answer_v1.jinja`) after `results/naive-v1.json` is committed destroys
+   comparability between runs.
+2. **Every number goes into `results/*.json` and gets committed — including the bad ones.** No
+   verbal reporting. Negative results are information.
+
+## Operational notes
+
+- **Changing the embedding model means `make reembed`, never `make ingest FORCE=1`.** `FORCE=1`
+  deletes and reinserts chunks, which **reassigns chunk ids** and invalidates every
+  `relevant_chunk_ids` in the golden set. `make reembed` UPDATEs in place, so chunk ids,
+  `corpus.lock.json` and the golden set all survive. The corpus is frozen and `make validate` fails
+  loudly when this happens ([ADR-0005](docs/adr/0005-frozen-corpus-for-the-golden-set.md),
+  [ADR-0008](docs/adr/0008-provider-migration-to-openai.md)).
+- **Any HTTP upload is a corpus change too.** `POST /documents` deliberately has **no** `force`
+  parameter, so it cannot reassign the ids of existing documents — but run `make validate` after any
+  upload session regardless.
+- **The API has no auth and no rate limit**, and every `/chat` call spends a metered key. Do not
+  expose it beyond a laptop or a trusted network.
+- Other targets: `make validate` · `make find Q="phụ cấp"` · `make eval P=naive-v1` · `make report` ·
+  `make test` · `make lint` · `make fmt` · `make psql` · `make logs` · `make down` ·
+  `make revision M="…"`.
+- Further reading: [docs/progress.md](docs/progress.md) (phase status, what is blocked on a human),
+  [CLAUDE.md](CLAUDE.md) (working rules), [PLAN.md](PLAN.md) (roadmap),
+  [docs/architecture.md](docs/architecture.md) (layering and the phase → directory map).
