@@ -15,12 +15,14 @@ from app.llm.rag.pipelines.base import (
     is_refusal,
     parse_citations,
 )
+from app.llm.rag.pipelines.hybrid_v2 import HybridV2
 from app.llm.rag.pipelines.naive_v1 import NaiveV1
 from app.llm.rag.pipelines.registry import available, build_pipeline, get_pipeline, register
 
 __all__ = [
     "REFUSAL_MARKER",
     "Citation",
+    "HybridV2",
     "NaiveV1",
     "RAGAnswer",
     "RAGPipeline",
