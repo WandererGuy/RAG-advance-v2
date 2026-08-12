@@ -129,17 +129,26 @@ routes/  →  services/  →  repositories/  →  models/
 **4.3. The retriever is an interface.**
 `retrievers/base.py` defines the protocol; `dense.py`, `bm25.py`, `hybrid.py`, `reranker.py`
 are implementations. The pipeline receives a retriever through its constructor; it does not
-instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phase 6.
+instantiate one itself. `dense.py` (Phase 4), `bm25.py` and `hybrid.py` (Phase 6) exist;
+`reranker.py` does not yet.
+
+**Retrieval scores are per-retriever and never comparable across retrievers.** A cosine similarity
+and a `ts_rank_cd` share no scale; `RetrievedChunk.score` means whatever the retriever that
+produced it ranks by. That is why `hybrid.py` fuses by **rank** (RRF, K=60) rather than by any
+weighted sum of scores.
 
 ## 5. Working rules
 
 1. **One phase at a time.** Finish phase N → run the Definition of Done → report → wait for
    confirmation. No skipping ahead, no "might as well do the next phase while I'm here".
 2. **Only create a directory/file when its phase arrives.** Map is in `docs/architecture.md`.
-3. **No premature optimization.** `chunk_size=800`, `overlap=100`, `top_k=5` are the starting
-   values; keep them unchanged until Phase 6.
-4. **From Phase 6 on: each experiment changes exactly 1 variable**, and is a new pipeline with
-   its own name.
+3. **No premature optimization.** `chunk_size=800`, `overlap=100`, `top_k=5` are the baseline
+   values. Phase 6 may vary them — one at a time, as a new pipeline. Changing chunk size means a
+   re-ingest, which reassigns chunk ids: read ADR-0005 before starting that one.
+4. **Each Phase 6 experiment changes exactly 1 variable**, and is a new pipeline with its own
+   name. **A pipeline that loses is committed anyway**, with an ADR saying why it was not adopted
+   — `hybrid-v2` is the worked example ([ADR-0009](docs/adr/0009-hybrid-retrieval-not-adopted.md)).
+   Never delete a negative result to tidy up.
 5. **No mocks, no fake data.** No real documents or API key yet → stop and ask.
    Absolutely do not generate sample PDFs just to "make it run".
 6. **The golden set is agent-authored**, under
@@ -177,6 +186,12 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
     when the user names it explicitly in a request ("look in old_code for X"), and then read only
     the specific files needed. It is never a source of truth: `PLAN.md`, `docs/` and the code in
     `backend/` are.
+16. **Retrieval metrics are deterministic; generation metrics are not.** `gpt-5.6-luna` rejects
+    `temperature=0`, so every run samples. Two runs of `hybrid-v2` on identical code and an
+    identical corpus produced `refusal_accuracy` **0.8 and 1.0**, while every retrieval metric came
+    back byte-identical. **Never draw a conclusion from a single run, or from a generation-metric
+    gap under ~0.2 between two pipelines.** Retrieval numbers may be compared directly
+    ([ADR-0009](docs/adr/0009-hybrid-retrieval-not-adopted.md)).
 
 ## 6. Code conventions
 

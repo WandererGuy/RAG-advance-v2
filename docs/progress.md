@@ -15,7 +15,7 @@ to know.
 | 3 — Golden set | ✅ done — questions **agent-authored** ([ADR-0004](adr/0004-agent-authored-golden-set.md)) | [progress/phase-3.md](progress/phase-3.md) |
 | 4 — `naive-v1` baseline | ✅ done — baseline committed, run on OpenAI ([ADR-0008](adr/0008-provider-migration-to-openai.md)) | [progress/phase-4.md](progress/phase-4.md) |
 | 5 — API + thin frontend | 🟡 code done — the demo gate needs **a human outside the team** | [progress/phase-5.md](progress/phase-5.md) |
-| 6 — Improvements | ⬜ not started | — |
+| 6 — Improvements | 🟡 in progress — experiment 1 of 4 done, a **negative result** ([ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md)) | [progress/phase-6.md](progress/phase-6.md) |
 
 ## Where the project stands
 
@@ -32,18 +32,19 @@ holds 29 questions with verified chunk citations. The build is green (`make lint
 `results/leaderboard.md` has its first row. The headline numbers — read
 [ADR-0004](adr/0004-agent-authored-golden-set.md) before quoting any of them — are
 `recall@5 0.958 · MRR 0.840 · nDCG@5 0.857` over the 24 answerable questions,
-`faithfulness 5.0 · answer_relevance 4.5` (self-graded), `citation_rate 1.0` with **zero**
-unsupported citations, and `p50 3281 ms`.
+`faithfulness 4.897 · answer_relevance 4.25` (self-graded), `citation_rate 1.0` with **zero**
+unsupported citations, `refusal_accuracy 1.0`, and `p50 2009 ms`.
 
-The number that matters is the weak one: **`refusal_accuracy` 0.6** — 2 of the 5 `unanswerable`
-questions were not refused. Phase 4 had flagged this metric as never exercised; it now is, and it
-is the worst column in the file. Both misses (`q025`, `q027`) actually *say* the documents do not
-contain the answer and then add adjacent real facts with valid citations, so they are hedged
-partial answers rather than invention — `faithfulness` 5.0 and 0 unsupported citations agree.
-They are counted as hallucinations because `is_refusal()` matches one exact sentence and nothing
-else, which is the deliberate design of [ADR-0006](adr/0006-how-generation-is-scored.md). The
-detector is behaving as specified; the specification did not anticipate a hedge. **This is the
-first thing Phase 6 should attack**, and it is a prompt-or-detector question, not a retrieval one.
+**`refusal_accuracy` is the number to distrust, not the number to celebrate.** It reads 1.0 in the
+committed file. An earlier run of the same pipeline scored **0.6**, missing `q025` and `q027` —
+answers that *say* the documents do not contain the answer and then add adjacent real facts with
+valid citations, i.e. hedges rather than invention, counted as hallucinations because
+`is_refusal()` matches one exact sentence by the deliberate design of
+[ADR-0006](adr/0006-how-generation-is-scored.md). Phase 6 then reproduced the same instability
+deliberately: two runs of `hybrid-v2`, identical code and corpus, scored 0.8 and 1.0. So the
+detector's blind spot to hedging is real and unfixed — a 1.0 means this run's sampling happened not
+to hedge, not that the contract is sound. **It remains a prompt-or-detector question, not a
+retrieval one**, and the decision belongs to a human (below).
 
 **Phase 5 built the API and the demo UI.** `POST /chat`, `POST /documents` (upload + synchronous
 ingest) and `GET /documents` are live, a Streamlit page at `make ui` puts a browser in front of
@@ -53,6 +54,24 @@ files), `make test` (**148 passed**), `make validate` PASS. What is **not** done
 Definition of Done itself: PLAN.md asks that someone outside the team click through it without
 instructions, and nobody has. That is a human gate and an agent cannot sign it — see
 [phase-5](progress/phase-5.md).
+
+**Phase 6 has run its first experiment, and it is a negative result.** `hybrid-v2` — dense + Postgres
+keyword retrieval fused by RRF, changing exactly one variable against the baseline — was built,
+measured and **not adopted** ([ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md)). It loses
+recall (0.958 → 0.938) and nDCG (0.857 → 0.845), wins MRR by 0.004 and `answer_relevance` by 0.29,
+and is faster (p50 1611 ms vs 2009 ms). Only 6 of 24 answerable questions changed retrieval at all:
+2 improved, 4 degraded. `naive-v1` remains the served pipeline; the code and the results file stay
+committed, because a negative result is information. PLAN.md predicted hybrid would be the biggest
+win available — on 8 synthetic HR documents with no part numbers or reference codes, there was
+nothing for the keyword half to catch that dense was missing.
+
+**The most transferable thing Phase 6 learned: generation metrics do not reproduce between runs.**
+`hybrid-v2` was run twice on identical code and an identical corpus. Retrieval came out
+byte-identical (it is deterministic); `refusal_accuracy` came out **0.8 then 1.0**, and
+faithfulness 4.862 then 5.000, because `gpt-5.6-luna` rejects `temperature=0` and every run
+samples. **No generation-metric gap under ~0.2 between two pipelines means anything**, and no
+conclusion should rest on a single run. That warning lands squarely on `refusal_accuracy`, the
+metric Phase 4 named as the one to fix.
 
 **The whole stack moved from Gemini to OpenAI** mid-session, by the project owner's decision:
 `gpt-5.6-luna` and `text-embedding-3-large` at an unchanged 768 dim
@@ -93,7 +112,7 @@ because no human was available. Neither is human-signed, and the distinction is 
   by a permission prompt three times; it has instead been emptied and replaced with a header saying
   it is dead. It is gitignored and was never committed. Deleting it for real is a 5-second human
   task.
-- **Decide what to do about `refusal_accuracy` 0.6** — whether the refusal contract should accept a
+- **Decide what to do about the refusal contract** — whether it should accept a
   hedge that names its own uncertainty, or whether the prompt should forbid hedging outright. That
   is a judgement about what employees should see, not a technical fix, and it belongs to a human.
 
@@ -101,12 +120,24 @@ because no human was available. Neither is human-signed, and the distinction is 
 
 Full detail in each phase entry; these are the ones that will bite a later phase.
 
-- **Any upload is a corpus change**, and this is observed, not theoretical: a document uploaded
-  through the UI during Phase 5 joined the frozen corpus and `make validate` FAILed by name until
-  it was deleted. **Run `make validate` after any upload session** — it detects this, nothing
-  prevents it. The HTTP path deliberately has **no `force` parameter**, so it cannot reassign the
-  chunk ids of existing documents; `make ingest FORCE=1` at a terminal still can.
-  ([phase-5](progress/phase-5.md))
+- **Generation metrics do not reproduce between runs; retrieval metrics do.** Two runs of
+  `hybrid-v2` on identical code and an identical corpus gave `refusal_accuracy` 0.8 then 1.0 and
+  faithfulness 4.862 then 5.000, while every retrieval metric came back byte-identical.
+  `gpt-5.6-luna` rejects `temperature=0`, so every run samples. **Never conclude anything from a
+  single run, or from a generation gap under ~0.2 between two pipelines.**
+  ([phase-6](progress/phase-6.md), [ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md))
+- **Any upload is a corpus change**, and this has now happened **twice**: a document uploaded
+  through the UI during Phase 5 joined the frozen corpus, and a second
+  (`manh_application_2025 (3).pdf`, 14 chunks) was found at the start of Phase 6 — which would have
+  silently invalidated the eval had `make validate` not caught it. **Run `make validate` after any
+  upload session, and before any eval run** — it detects this, nothing prevents it, and a
+  contaminated run produces numbers that look completely normal. The HTTP path deliberately has
+  **no `force` parameter**, so it cannot reassign the chunk ids of existing documents;
+  `make ingest FORCE=1` at a terminal still can.
+  ([phase-5](progress/phase-5.md), [phase-6](progress/phase-6.md))
+- **`hybrid-v2` is frozen too**, now that its results file is committed: `hybrid_v2.py`,
+  `bm25.py` and `hybrid.py` must not be edited. A weighted-RRF variant is `hybrid-w-v3`, a new
+  file. ([phase-6](progress/phase-6.md))
 - **The API has no auth, no permissions and no rate limit**, which is in scope for v1 but means
   every `/chat` call spends a metered key. Do not expose it beyond a laptop or a trusted network.
   ([phase-5](progress/phase-5.md))
