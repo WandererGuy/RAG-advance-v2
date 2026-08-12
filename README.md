@@ -1,5 +1,8 @@
 # rag-chatbot
 
+Vietnamese version: [README.vi.md](README.vi.md).
+Bản tiếng Việt giới thiệu ở: [README.vi.md](README.vi.md).
+
 Q&A over internal company documents: users ask in Vietnamese, the system answers **with citations**
 (document name + page number), or explicitly refuses when the documents do not contain the answer.
 
@@ -8,8 +11,6 @@ leave and remote work, information security, hiring, code of conduct, travel exp
 34 chunks. These are **synthetic** demo documents for a fictional company, not real data, so they
 are committed to the repo at [data/raw/HR_pdfs/](data/raw/HR_pdfs/) and are safe to open, quote and
 share ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md)).
-
-Vietnamese version: [README.vi.md](README.vi.md).
 
 ## Example
 
