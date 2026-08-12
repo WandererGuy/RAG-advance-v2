@@ -101,11 +101,12 @@ because no human was available. Neither is human-signed, and the distinction is 
 
 Full detail in each phase entry; these are the ones that will bite a later phase.
 
-- **`POST /documents?force=true` reassigns chunk ids too**, and it is reachable from an HTTP call
-  rather than only from a Makefile target. Same failure as `make ingest FORCE=1`, same detector:
-  run `make validate` after any upload session. An ordinary upload is also a corpus change — a
-  document ingested to "try it out" changes what every future eval run measures, so delete it and
-  re-validate. ([phase-5](progress/phase-5.md))
+- **Any upload is a corpus change**, and this is observed, not theoretical: a document uploaded
+  through the UI during Phase 5 joined the frozen corpus and `make validate` FAILed by name until
+  it was deleted. **Run `make validate` after any upload session** — it detects this, nothing
+  prevents it. The HTTP path deliberately has **no `force` parameter**, so it cannot reassign the
+  chunk ids of existing documents; `make ingest FORCE=1` at a terminal still can.
+  ([phase-5](progress/phase-5.md))
 - **The API has no auth, no permissions and no rate limit**, which is in scope for v1 but means
   every `/chat` call spends a metered key. Do not expose it beyond a laptop or a trusted network.
   ([phase-5](progress/phase-5.md))

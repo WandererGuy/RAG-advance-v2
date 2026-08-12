@@ -67,9 +67,10 @@ Changing it is a migration plus a re-embed plus a re-run of every pipeline.
 **Changing the embedding model — even at the same dimension — invalidates every stored vector**,
 because embeddings are only comparable to others from the same model. Re-embed with `make reembed`,
 which UPDATEs the vectors in place. **Never `make ingest FORCE=1`**: that reassigns chunk ids and
-silently invalidates every `relevant_chunk_ids` in the golden set (ADR-0005, ADR-0008). The same
-applies to **`POST /documents?force=true`** — the trap is reachable over HTTP too. An ordinary
-upload is also a corpus change: run `make validate` after any upload session.
+silently invalidates every `relevant_chunk_ids` in the golden set (ADR-0005, ADR-0008). That trap
+is deliberately **not** reachable over HTTP: `POST /documents` has no `force` parameter and always
+skips known bytes. An ordinary upload is still a corpus change, so run `make validate` after any
+upload session.
 
 Deliberately **not** in v1: Celery + Redis, LangChain, LangGraph, Chonkie. Each is rejected in
 ADR-0002 with a named trigger for revisiting. Do not add them without an ADR.

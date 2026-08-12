@@ -84,6 +84,25 @@ async def test_upload_rejects_a_pdf_with_no_readable_text(client: AsyncClient) -
     assert response.json()["detail"]
 
 
+async def test_upload_offers_no_way_to_force_a_reingest(client: AsyncClient) -> None:
+    """`force` must not be reachable over HTTP, however it is spelled.
+
+    A forced re-ingest reassigns chunk ids and silently invalidates the golden set (ADR-0005).
+    Behind an HTTP call that is a checkbox in Swagger; `make ingest FORCE=1` at a terminal is
+    where it belongs. This asserts the parameter is absent from the published contract and that
+    passing it anyway changes nothing — FastAPI ignores unknown query params, so the second
+    check is what would catch someone re-adding it and wiring it through.
+    """
+    spec = (await client.get("/openapi.json")).json()
+    params = spec["paths"]["/api/v1/documents"]["post"].get("parameters", [])
+    assert [p["name"] for p in params] == []
+
+    response = await client.post(
+        "/api/v1/documents?force=true", files={"file": ("notes.txt", b"khong phai pdf")}
+    )
+    assert response.status_code == 415
+
+
 @pytest.mark.parametrize("question", ["", "   "])
 async def test_chat_rejects_a_blank_question(client: AsyncClient, question: str) -> None:
     response = await client.post("/api/v1/chat", json={"question": question})

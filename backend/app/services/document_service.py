@@ -36,12 +36,15 @@ async def list_documents(session: AsyncSession, *, limit: int = 200) -> list[Doc
     return [DocumentOut.from_model(document, chunk_count=count) for document, count in rows]
 
 
-async def ingest_upload(
-    session: AsyncSession, *, filename: str, content: bytes, force: bool = False
-) -> IngestResponse:
+async def ingest_upload(session: AsyncSession, *, filename: str, content: bytes) -> IngestResponse:
     """Persist an uploaded file and ingest it synchronously.
 
     Slow is acceptable here and there is deliberately no queue (PLAN.md Phase 5).
+
+    **This path never forces a re-ingest**, and takes no parameter that would let a caller ask
+    for one. A forced re-ingest reassigns chunk ids and silently invalidates the golden set
+    (ADR-0005); it belongs at a terminal (`make ingest FORCE=1`), not behind an HTTP call.
+    Known bytes are skipped, which is what an upload form should do anyway.
 
     The file is written to its final location in `data/uploads/` **before** ingest, because
     `documents.source_path` records where the file lives and a path under a temporary directory
@@ -57,7 +60,7 @@ async def ingest_upload(
 
     stored = _write(content, safe_name)
     try:
-        result = await ingest_file(session, stored, force=force)
+        result = await ingest_file(session, stored)
     except Exception:
         stored.unlink(missing_ok=True)
         raise

@@ -34,14 +34,18 @@ async def list_documents(
 async def upload_document(
     session: DbSession,
     file: Annotated[UploadFile, File(description="A text-based PDF or a DOCX.")],
-    force: Annotated[bool, Query(description="Re-ingest even if these bytes are known.")] = False,
 ) -> IngestResponse:
     """Upload one document and ingest it before responding.
 
-    `force=true` re-ingests bytes that are already known, which **deletes and re-inserts that
-    document's chunks and therefore reassigns their ids**. On the frozen corpus that is the
-    action ADR-0005 exists to catch; it is exposed because a genuinely re-uploaded document
-    needs it, not because it is safe to click.
+    **There is deliberately no `force` parameter.** A forced re-ingest deletes and re-inserts a
+    document's chunks, which reassigns their ids and silently invalidates every
+    `relevant_chunk_ids` in the golden set — the failure ADR-0005 exists to catch. Over HTTP
+    that would be a checkbox in Swagger, one click away from destroying the only fixed point
+    this project measures against, and a docstring is not a safeguard.
+
+    Re-ingesting is still possible where it belongs: `make ingest FORCE=1` at a terminal, which
+    announces what it is about to do. Uploading bytes that are already known is a no-op here
+    (`status="skipped"`), which is the correct behaviour for an upload form.
     """
     if not file.filename:
         raise HTTPException(
@@ -64,7 +68,7 @@ async def upload_document(
 
     try:
         result = await document_service.ingest_upload(
-            session, filename=file.filename, content=content, force=force
+            session, filename=file.filename, content=content
         )
     except UnsupportedFileType as exc:
         raise HTTPException(

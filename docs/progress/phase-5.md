@@ -73,6 +73,15 @@ no real pagination — all three parsed correctly.
   again, so a re-upload of an unchanged document does not grow the directory.
 - **Uploads land in `data/uploads/`, never in `data/raw/HR_pdfs/`** — that directory is the
   frozen corpus, and an upload must not silently join it.
+- **`POST /documents` takes no `force` parameter, deliberately.** It was built with one and
+  removed the same day, on the project owner's challenge. A forced re-ingest reassigns chunk ids
+  and silently invalidates the golden set (ADR-0005); over HTTP that is a checkbox in Swagger,
+  one click from destroying the only fixed point this project measures against, and the
+  docstring warning it carried is not a safeguard. Nothing called it — not the frontend, not a
+  test, not a script — so it was speculative capability of the kind CLAUDE.md 2 forbids. Forced
+  re-ingest still exists where it belongs: `make ingest FORCE=1` at a terminal, which announces
+  what it is about to do. A test asserts the parameter is absent from the published OpenAPI
+  contract, so re-adding it cannot pass silently.
 - **`GET /documents` is one LEFT JOIN + GROUP BY**, not a count per row: it renders the whole
   table, and a per-document count would be an N+1 growing with the corpus. LEFT so a `failed`
   document with no chunks still appears — that row is the one worth seeing.
@@ -122,11 +131,12 @@ no real pagination — all three parsed correctly.
   is wired and proven, and it fills with real traffic the first time a human uses the UI.
 - **The Streamlit UI has no test.** It is a client with no logic worth asserting, and its render
   path was exercised against the live API by hand. If it grows logic, that stops being true.
-- **`POST /documents?force=true` is exposed and is genuinely dangerous** — it deletes and
-  re-inserts a document's chunks, which **reassigns chunk ids** and silently invalidates
-  `relevant_chunk_ids` in the golden set (ADR-0005). It is there because a genuinely re-uploaded
-  document needs it, not because it is safe to click. The route's docstring says so; nothing
-  enforces it.
+- **An ordinary upload is still a corpus change**, and that is now proven rather than predicted:
+  during this phase's verification a document was uploaded through the UI and joined the frozen
+  corpus, taking it to 9 documents / 48 chunks. `make validate` caught it by name and FAILed —
+  ADR-0005's detector working exactly as designed. The document was deleted and the corpus is
+  back to 8 / 34, PASS. **Run `make validate` after any upload session**; nothing prevents this,
+  only detects it.
 - **An upload is ingested with the *current* embedding model** and joins a corpus embedded with
   whatever model was current when it ran. After an embedding-model change, `make reembed` covers
   existing chunks; a document uploaded in between is the case nothing checks.
@@ -170,7 +180,8 @@ curl -s -X POST localhost:8000/api/v1/chat \
   -H 'Content-Type: application/json' \
   -d '{"question":"Chính sách nghỉ phép năm là bao nhiêu ngày?"}' | python3 -m json.tool
 
-# Upload. Without ?force=true a known document is skipped, which is what you want.
+# Upload. There is no force parameter: known bytes are always skipped.
+# An upload is a corpus change — run `make validate` afterwards.
 curl -s -X POST localhost:8000/api/v1/documents -F "file=@/path/to/tai-lieu.pdf"
 ```
 
@@ -196,11 +207,13 @@ what you want them to see, or should it hedge and name the nearest real fact? An
 highest-leverage action is unchanged: read `golden_qa.v1.jsonl` and rewrite the weakest questions
 as `v2` under your own name.
 
-**Notice:** **`?force=true` on an upload reassigns chunk ids and silently invalidates the golden
-set** — the same trap as `make ingest FORCE=1` (ADR-0005), now reachable from an HTTP call. Run
-`make validate` after any upload session; it is the only thing that catches it. An upload joins
-the frozen corpus, so ingesting a document to "try it out" changes what every future eval run
-measures — delete it and re-validate, as this phase did. There is **no auth and no rate limit**:
+**Notice:** **an upload joins the frozen corpus**, so ingesting a document to "try it out"
+changes what every future eval run measures. It happened during this phase's own verification,
+twice. `make validate` is the only thing that catches it, and it catches it by name — delete the
+document and re-validate, as this phase did both times. The HTTP path cannot *force* a re-ingest
+(there is no `force` parameter, by design), so chunk ids of existing documents are safe from it;
+`make ingest FORCE=1` at a terminal is still the trap ADR-0005 describes. There is **no auth and
+no rate limit**:
 every `/chat` call spends a metered key, so do not expose this beyond a laptop. Ingest is
 synchronous and capped at 25 MB. A citation with `supported: false` names a source the model was
 never given — the UI marks those in red and they must never be read as a real source. And
