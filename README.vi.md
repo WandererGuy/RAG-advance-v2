@@ -120,16 +120,56 @@ Celery + Redis, Chonkie, LangChain / LangGraph **cố tình không có trong v1*
 
 ## Chạy thử
 
+Lần đầu — dựng môi trường và nạp corpus:
+
 ```bash
 cp .env.example .env    # điền DEFAULT_LLM_API_KEY + EMBEDDING_API_KEY (OpenAI)
 make install            # uv sync --extra dev
 make up                 # docker compose up -d --wait
 make migrate            # alembic upgrade head
 make ingest             # mặc định --path ../data/raw
-make api                # uvicorn trên :8000 — thêm `make ui` ở terminal khác cho UI Streamlit
 ```
 
-Mọi target chạy từ thư mục gốc; Makefile tự `cd backend`.
+Sau đó, [scripts/start.sh](scripts/start.sh) bật toàn bộ stack bằng một lệnh —
+postgres → migration → API → Streamlit, mỗi bước chờ healthy rồi mới sang bước sau:
+
+```bash
+./scripts/start.sh          # API ở :8000, UI ở :8501
+./scripts/start.sh --stop   # tắt API + UI (postgres vẫn chạy)
+```
+
+| | |
+|---|---|
+| API docs | http://127.0.0.1:8000/docs |
+| Health | http://127.0.0.1:8000/api/v1/health → `{"status":"ok","database":"up"}` |
+| UI | http://127.0.0.1:8501 |
+| Log | `.run/api.log` · `.run/ui.log` |
+
+Smoke test khi stack đang chạy, trả lời từ corpus đã commit:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Nhân viên được nghỉ phép bao nhiêu ngày một năm?"}'
+# → "Nhân viên chính thức được nghỉ 15 ngày phép/năm; cứ 03 năm làm việc liên tục được cộng
+#    thêm 01 ngày, tối đa 20 ngày. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]"
+```
+
+`--stop` giải phóng cổng 8000 và 8501 theo cổng chứ không chỉ theo pidfile, nên dọn được cả server
+bật tay bằng `make api` / `make ui`. Hai cổng đều đổi được: `API_PORT=8080 ./scripts/start.sh`.
+
+**Chạy trên máy chủ từ xa?** Các URL `127.0.0.1` ở trên — và cả `0.0.0.0` / `localhost` mà Streamlit
+in ra — chỉ mở được bằng trình duyệt **ngay trên máy chủ đó**. `0.0.0.0` là địa chỉ bind, nghĩa là
+"nghe trên mọi interface", không phải một đích đến để truy cập; từ laptop của bạn thì cả nó lẫn
+`localhost` đều trỏ về chính laptop, nơi không có gì chạy. Hãy dùng địa chỉ của máy chủ
+(`http://<ip-máy-chủ>:8501`), và đặt `PUBLIC_HOST=<ip-máy-chủ>` để script tự in ra URL đó.
+**API chỉ bind vào localhost** nên không truy cập được theo cách này — đây là cố ý, vì API không có
+auth và mỗi lệnh gọi `/chat` tiêu tốn một key có tính phí. Trang Streamlit gọi API từ phía máy chủ
+nên UI vẫn chạy bình thường; muốn gọi thẳng API thì mở tunnel:
+`ssh -L 8000:127.0.0.1:8000 <user>@<server>`.
+
+Nếu muốn chạy tách rời thì `make api` và `make ui` ở hai terminal vẫn dùng được như cũ. Mọi target
+chạy từ thư mục gốc; Makefile tự `cd backend`.
 
 ## Phạm vi
 

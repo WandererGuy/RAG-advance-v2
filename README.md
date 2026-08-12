@@ -131,16 +131,56 @@ revisiting each.
 
 ## Running it
 
+First time — set up the environment and load the corpus:
+
 ```bash
 cp .env.example .env    # fill DEFAULT_LLM_API_KEY + EMBEDDING_API_KEY (OpenAI)
 make install            # uv sync --extra dev
 make up                 # docker compose up -d --wait
 make migrate            # alembic upgrade head
 make ingest             # defaults to --path ../data/raw
-make api                # uvicorn on :8000 — add `make ui` in another terminal for Streamlit
 ```
 
-Every target runs from the repository root; the Makefile handles the `cd backend`.
+After that, [scripts/start.sh](scripts/start.sh) brings up the whole stack in one command —
+postgres → migrations → API → Streamlit, each step waited on before the next:
+
+```bash
+./scripts/start.sh          # API on :8000, UI on :8501
+./scripts/start.sh --stop   # stops API + UI (postgres keeps running)
+```
+
+| | |
+|---|---|
+| API docs | http://127.0.0.1:8000/docs |
+| Health | http://127.0.0.1:8000/api/v1/health → `{"status":"ok","database":"up"}` |
+| UI | http://127.0.0.1:8501 |
+| Logs | `.run/api.log` · `.run/ui.log` |
+
+A smoke test against a running stack, answering from the committed corpus:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Nhân viên được nghỉ phép bao nhiêu ngày một năm?"}'
+# → "Nhân viên chính thức được nghỉ 15 ngày phép/năm; cứ 03 năm làm việc liên tục được cộng
+#    thêm 01 ngày, tối đa 20 ngày. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]"
+```
+
+`--stop` frees ports 8000 and 8501 by port, not just by pidfile, so it also clears a server started
+by hand with `make api` / `make ui`. Both ports are overridable: `API_PORT=8080 ./scripts/start.sh`.
+
+**Running on a remote box?** Those `127.0.0.1` URLs — and the `0.0.0.0` / `localhost` ones Streamlit
+prints — only work in a browser *on the server itself*. `0.0.0.0` is a bind address meaning "listen
+on every interface", not a destination you can visit; from your laptop both it and `localhost` point
+at your laptop, where nothing is running. Use the server's own address instead
+(`http://<server-ip>:8501`), and set `PUBLIC_HOST=<server-ip>` to have the script print it for you.
+The **API binds to localhost only** and is not reachable that way — that is deliberate, since it has
+no auth and every `/chat` call spends a metered key. The Streamlit page calls it from the server
+side, so the UI works regardless; to hit the API yourself, tunnel it:
+`ssh -L 8000:127.0.0.1:8000 <user>@<server>`.
+
+To run the pieces separately instead, `make api` and `make ui` still work in two terminals. Every
+target runs from the repository root; the Makefile handles the `cd backend`.
 
 ## Scope
 
