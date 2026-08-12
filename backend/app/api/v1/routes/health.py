@@ -1,18 +1,16 @@
-"""GET /health — the only route in Phase 1."""
+"""GET /health — liveness plus a real database round-trip."""
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from typing import Annotated, Literal
+from typing import Literal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import DbSession
 from app.core.logging import get_logger
-from app.db.session import get_sessionmaker
 
 router = APIRouter(tags=["health"])
 log = get_logger(__name__)
@@ -23,19 +21,8 @@ class HealthResponse(BaseModel):
     database: Literal["up", "down"]
 
 
-async def _session() -> AsyncIterator[AsyncSession]:
-    """Local session dependency.
-
-    Phase 5 introduces app/api/deps.py with the real request-scoped get_db; until then this
-    route needs a session and there is nowhere else for it to come from. Read-only, so it
-    never commits.
-    """
-    async with get_sessionmaker()() as session:
-        yield session
-
-
 @router.get("/health", response_model=HealthResponse)
-async def health(session: Annotated[AsyncSession, Depends(_session)]) -> JSONResponse:
+async def health(session: DbSession) -> JSONResponse:
     """Liveness plus a real database round-trip.
 
     A health check that does not touch the database would report ok while every request

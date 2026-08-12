@@ -115,6 +115,23 @@ class DocumentRepository:
             document.page_count = page_count
         await self._session.flush()
 
+    async def list_with_chunk_counts(self, limit: int = 200) -> list[tuple[Document, int]]:
+        """Every document, newest first, each with how many chunks it has.
+
+        One LEFT JOIN + GROUP BY rather than a count per document: `GET /documents` renders the
+        whole table, and a per-row count would be an N+1 that grows with the corpus. LEFT, so a
+        `failed` document with no chunks still appears — that row is the one worth seeing.
+        """
+        chunk_count = func.count(Chunk.id)
+        result = await self._session.execute(
+            select(Document, chunk_count)
+            .outerjoin(Chunk, Chunk.document_id == Document.id)
+            .group_by(Document.id)
+            .order_by(Document.created_at.desc(), Document.id.desc())
+            .limit(limit)
+        )
+        return [(document, int(count)) for document, count in result.all()]
+
     async def status_counts(self) -> dict[str, int]:
         """`SELECT status, count(*) FROM documents GROUP BY status` — the Phase 2 DoD query."""
         result = await self._session.execute(

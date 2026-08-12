@@ -1,4 +1,4 @@
-.PHONY: help up down logs psql install migrate revision api ingest reembed find validate eval report test lint fmt
+.PHONY: help up down logs psql install migrate revision api ui ingest reembed find validate eval report test lint fmt
 .DEFAULT_GOAL := help
 
 BACKEND := backend
@@ -30,6 +30,9 @@ revision:  ## autogenerate a migration: make revision M="add x"
 
 api:  ## run the API with reload
 	cd $(BACKEND) && $(UV) run uvicorn app.main:app --reload
+
+ui:  ## run the Streamlit demo UI (needs `make api` in another terminal)
+	cd $(BACKEND) && $(UV) run --extra frontend streamlit run ../frontend/app.py
 
 ingest:  ## ingest the corpus: make ingest [P=../data/raw] [FORCE=1]
 	cd $(BACKEND) && $(UV) run python -m scripts.ingest_corpus --path $(or $(P),../data/raw) $(if $(FORCE),--force,)

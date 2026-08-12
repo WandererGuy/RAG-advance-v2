@@ -12,6 +12,10 @@ data/raw/*
 !data/raw/HR_pdfs/
 !data/samples/
 
+# uploads — whatever POST /documents received. Unlike data/raw/HR_pdfs/ these are not
+# vetted as synthetic, so nothing here is ever committed (ADR-0001).
+data/uploads/
+
 # python
 __pycache__/
 *.py[cod]

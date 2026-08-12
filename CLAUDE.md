@@ -35,7 +35,6 @@ is designed for the final stage — but **do not scaffold all of it up front**. 
 | `app/llm/tools/` | after Phase 6 (function calling) |
 | `app/api/v1/routes/conversations.py` | after Phase 6 |
 | `app/repositories/conversation_repo.py`, `message_repo.py` | after Phase 6 |
-| `frontend/` | Phase 5 |
 | Qdrant version of `vector_store.py` | never — pgvector is enough |
 
 Do not create empty `.py` files or abstract classes "for later use". If a directory is
@@ -58,7 +57,7 @@ original wording, [ADR-0002](docs/adr/0002-tech-stack-resolution.md) records why
 | Embedding | `text-embedding-3-large`, **768 dim** (native truncation), read from `.env` |
 | LLM | read from `.env`, currently `gpt-5.6-luna` via LiteLLM ([ADR-0008](docs/adr/0008-provider-migration-to-openai.md)). **Pinned, never a moving alias.** It rejects `temperature=0`, so `LLM_SUPPORTS_TEMPERATURE=false` and results files record `temperature: null` |
 | Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames |
-| Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) |
+| Frontend | Streamlit, single file (`frontend/app.py`, `make ui`) — a client of the API, holding no logic. An optional `frontend` extra, so the API deploys without it |
 | Test | pytest + `pytest-asyncio` |
 
 The vector dimension **768** is written in three places that must change together: `.env`
@@ -68,7 +67,9 @@ Changing it is a migration plus a re-embed plus a re-run of every pipeline.
 **Changing the embedding model — even at the same dimension — invalidates every stored vector**,
 because embeddings are only comparable to others from the same model. Re-embed with `make reembed`,
 which UPDATEs the vectors in place. **Never `make ingest FORCE=1`**: that reassigns chunk ids and
-silently invalidates every `relevant_chunk_ids` in the golden set (ADR-0005, ADR-0008).
+silently invalidates every `relevant_chunk_ids` in the golden set (ADR-0005, ADR-0008). The same
+applies to **`POST /documents?force=true`** — the trap is reachable over HTTP too. An ordinary
+upload is also a corpus change: run `make validate` after any upload session.
 
 Deliberately **not** in v1: Celery + Redis, LangChain, LangGraph, Chonkie. Each is rejected in
 ADR-0002 with a named trigger for revisiting. Do not add them without an ADR.
@@ -201,6 +202,7 @@ make find Q="phụ cấp"
                  # python -m scripts.find_chunks --q "…" — chunk ids for the golden set
 make validate    # python -m eval.datasets.validate — golden set + frozen corpus (ADR-0005)
 make api         # uvicorn app.main:app --reload
+make ui          # streamlit run frontend/app.py — needs `make api` in another terminal
 make eval P=naive-v1
                  # python -m eval.runner --pipeline naive-v1
 make report      # python -m eval.report -> results/leaderboard.md

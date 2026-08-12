@@ -14,7 +14,7 @@ to know.
 | 2 — Synchronous ingest | ✅ done — sign-off **agent-executed**, not human-signed | [progress/phase-2.md](progress/phase-2.md) |
 | 3 — Golden set | ✅ done — questions **agent-authored** ([ADR-0004](adr/0004-agent-authored-golden-set.md)) | [progress/phase-3.md](progress/phase-3.md) |
 | 4 — `naive-v1` baseline | ✅ done — baseline committed, run on OpenAI ([ADR-0008](adr/0008-provider-migration-to-openai.md)) | [progress/phase-4.md](progress/phase-4.md) |
-| 5 — API + thin frontend | ⬜ not started | — |
+| 5 — API + thin frontend | 🟡 code done — the demo gate needs **a human outside the team** | [progress/phase-5.md](progress/phase-5.md) |
 | 6 — Improvements | ⬜ not started | — |
 
 ## Where the project stands
@@ -45,6 +45,15 @@ else, which is the deliberate design of [ADR-0006](adr/0006-how-generation-is-sc
 detector is behaving as specified; the specification did not anticipate a hedge. **This is the
 first thing Phase 6 should attack**, and it is a prompt-or-detector question, not a retrieval one.
 
+**Phase 5 built the API and the demo UI.** `POST /chat`, `POST /documents` (upload + synchronous
+ingest) and `GET /documents` are live, a Streamlit page at `make ui` puts a browser in front of
+them, and `queries` is written for the first time — the table that will eventually let a golden
+set grow from real traffic instead of imagination. The build is green: `make lint` (57 source
+files), `make test` (**148 passed**), `make validate` PASS. What is **not** done is the
+Definition of Done itself: PLAN.md asks that someone outside the team click through it without
+instructions, and nobody has. That is a human gate and an agent cannot sign it — see
+[phase-5](progress/phase-5.md).
+
 **The whole stack moved from Gemini to OpenAI** mid-session, by the project owner's decision:
 `gpt-5.6-luna` and `text-embedding-3-large` at an unchanged 768 dim
 ([ADR-0008](adr/0008-provider-migration-to-openai.md), which supersedes ADR-0007). Two
@@ -74,8 +83,11 @@ because no human was available. Neither is human-signed, and the distinction is 
 
 ## Still blocked on a human
 
-- **Nothing blocks Phase 5.** The provider-quota blocker is gone: the OpenAI key is metered, the
-  full run completed, and the baseline is committed.
+- **Phase 5's Definition of Done is a human gate and it is open.** *"Someone outside the team can
+  click through it without instructions"* — the UI serves, renders the corpus and answers real
+  questions, but no such person has used it. Nothing blocks Phase 6 technically; this gate is what
+  stands between Phase 5 being "code done" and "done". Its second clause — real data in `queries`
+  after a demo session — fills itself the moment a human uses the UI.
 - **`backend/.env` is redundant and still on disk.** The live config is the repo-root `.env`, which
   `config.py` resolves by absolute path, so this file affects nothing. Deleting it has been blocked
   by a permission prompt three times; it has instead been emptied and replaced with a header saying
@@ -89,6 +101,14 @@ because no human was available. Neither is human-signed, and the distinction is 
 
 Full detail in each phase entry; these are the ones that will bite a later phase.
 
+- **`POST /documents?force=true` reassigns chunk ids too**, and it is reachable from an HTTP call
+  rather than only from a Makefile target. Same failure as `make ingest FORCE=1`, same detector:
+  run `make validate` after any upload session. An ordinary upload is also a corpus change — a
+  document ingested to "try it out" changes what every future eval run measures, so delete it and
+  re-validate. ([phase-5](progress/phase-5.md))
+- **The API has no auth, no permissions and no rate limit**, which is in scope for v1 but means
+  every `/chat` call spends a metered key. Do not expose it beyond a laptop or a trusted network.
+  ([phase-5](progress/phase-5.md))
 - **Chunk ids are reassigned by any `--force` re-ingest**, which invalidates the golden set's
   `relevant_chunk_ids`. Now caught rather than prevented: the corpus is frozen in
   `eval/datasets/corpus.lock.json` and `make validate` fails loudly, naming what happened
@@ -124,8 +144,6 @@ Full detail in each phase entry; these are the ones that will bite a later phase
   pipelines stays valid, absolute numbers do not. ([phase-0](progress/phase-0.md))
 - **`POSTGRES_PASSWORD=rag` is a laptop default** and must change before this runs anywhere else.
   ([phase-1](progress/phase-1.md))
-- **`health.py` carries a local session dependency** to be deleted when `api/deps.py` lands in
-  Phase 5. ([phase-1](progress/phase-1.md))
 
 ## Adding an entry
 

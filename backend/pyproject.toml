@@ -24,9 +24,18 @@ dependencies = [
     # Phase 4: prompt templates. LiteLLM already pulls Jinja2 in, but the prompts are ours and
     # a transitive dependency is not a contract.
     "jinja2>=3.1",
+    # Phase 5: POST /documents is a multipart upload, and FastAPI refuses to build the route
+    # without this at import time.
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]
+# Phase 5: the demo UI. Separate from the runtime deps because the API must be deployable
+# without it — the frontend is a client, not part of the service.
+frontend = [
+    "streamlit>=1.41",
+    "requests>=2.32",
+]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.25",
