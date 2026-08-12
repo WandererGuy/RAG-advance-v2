@@ -1,15 +1,12 @@
 # CLAUDE.md — rag-chatbot
 
 Context file auto-loaded by Claude Code. Read all of it before doing anything.
-Build plan: `PLAN.md`. Phase → directory map: `docs/architecture.md`.
 
-> **Start here: `docs/progress.md`.** It is a short index — the status of every phase, what is
-> blocked on a human, and a link to one file per phase in `docs/progress/` holding the evidence,
-> deviations and open items. **Phases 0–2 are complete; Phase 2's sign-off was agent-executed, not
-> human-signed. Phase 3 is unblocked: the golden set is agent-authored under
-> [ADR-0004](docs/adr/0004-agent-authored-golden-set.md), which rule 5.6 below now defers to.**
-> Section 3 below has been partly superseded — read it together with
-> `docs/adr/0002-tech-stack-resolution.md`.
+> **Then read `docs/progress.md`** — the status of every phase, what is blocked on a human, and a
+> link to one file per phase in `docs/progress/` holding the evidence, deviations and open items.
+> This file says what is *true*; the progress log says what has *happened*; `docs/adr/` says *why*.
+
+Build plan: `PLAN.md`. Phase → directory map: `docs/architecture.md`.
 
 ---
 
@@ -45,39 +42,36 @@ Do not create empty `.py` files or abstract classes "for later use". If a direct
 empty, leave it empty (with a `.gitkeep`). Abstraction created before the need for it is
 debt, not an asset.
 
-## 3. Tech stack — decided
+## 3. Tech stack — as built
 
-Four rows below were superseded during Phase 0 by
-[ADR-0002](docs/adr/0002-tech-stack-resolution.md), after the human gate. **Build against the
-"as built" column** — it is what is running and what the schema already encodes.
+This is what is running and what the schema already encodes. Where it differs from PLAN.md's
+original wording, [ADR-0002](docs/adr/0002-tech-stack-resolution.md) records why.
 
-| | originally written here | as built |
-|---|---|---|
-| Python | 3.11, managed with `uv` | **3.12**, managed with `uv` |
-| DB | PostgreSQL 16 + pgvector | same |
-| ORM | SQLAlchemy 2.x + Alembic | same, **async** (`asyncpg`) |
-| API | FastAPI + uvicorn | same |
-| PDF | PyMuPDF (`fitz`) — accurate page numbers required | same |
-| DOCX | `python-docx` | same |
-| Embedding | `text-embedding-3-small` (1536 dim) | **`gemini-embedding-001`, 768 dim**, read from `.env` |
-| LLM | read from env, defaults to `claude-sonnet-4-6` | read from `.env`, currently **`gemini-3.6-flash`** via LiteLLM ([ADR-0007](docs/adr/0007-llm-model-migration-to-gemini-3-6-flash.md); `gemini-2.5-flash` was retired by the provider mid-Phase-4). Never a moving alias |
-| Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames | same |
-| Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) | same |
-| Test | pytest | same (+ `pytest-asyncio`) |
+| | |
+|---|---|
+| Python | 3.12, managed with `uv` |
+| DB | PostgreSQL 16 + pgvector |
+| ORM | SQLAlchemy 2.x + Alembic, **async** (`asyncpg`) |
+| API | FastAPI + uvicorn |
+| PDF | PyMuPDF (`fitz`) — accurate page numbers required |
+| DOCX | `python-docx` |
+| Embedding | `gemini-embedding-001`, **768 dim**, read from `.env` |
+| LLM | read from `.env`, currently `gemini-3.6-flash` via LiteLLM ([ADR-0007](docs/adr/0007-llm-model-migration-to-gemini-3-6-flash.md)). **Pinned, never a moving alias** |
+| Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames |
+| Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) |
+| Test | pytest + `pytest-asyncio` |
 
 The vector dimension **768** is written in three places that must change together: `.env`
 (`EMBEDDING_DIMENSIONS`), `app/models/chunk.py` (`EMBEDDING_DIM`), and the initial migration.
 Changing it is a migration plus a full re-ingest plus a re-run of every pipeline.
 
-Deliberately **not** in v1, despite PLAN.md line 14 suggesting them: Celery + Redis, LangChain,
-LangGraph, Chonkie. Each is rejected in ADR-0002 with a named trigger for revisiting. Do not add
-them without an ADR.
+Deliberately **not** in v1: Celery + Redis, LangChain, LangGraph, Chonkie. Each is rejected in
+ADR-0002 with a named trigger for revisiting. Do not add them without an ADR.
 
-> ✅ **Project-blocking question — answered 2026-08-09, see
-> [ADR-0001](docs/adr/0001-scope-va-data-boundary.md).** Data **is** allowed to leave for an
-> external API; Gemini is approved. Self-hosting (Ollama + `bge-m3`) is therefore not needed. Do
-> not re-open this on your own; if it is reversed, every embedding and every committed result is
-> invalidated.
+> ✅ **Data is allowed to leave for an external API; Gemini is approved**
+> ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md), 2026-08-09). Self-hosting is therefore not
+> needed. Do not re-open this on your own — if it is reversed, every embedding and every committed
+> result is invalidated.
 
 ## 4. Architecture principles
 
@@ -134,13 +128,12 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
    its own name.
 5. **No mocks, no fake data.** No real documents or API key yet → stop and ask.
    Absolutely do not generate sample PDFs just to "make it run".
-6. ~~**Do not write the golden set yourself** (Phase 3). If asked to, refuse and explain why.~~
-   **Superseded 2026-08-11 by [ADR-0004](docs/adr/0004-agent-authored-golden-set.md)**, after the
-   project owner authorised the agent to take the gate. The golden set *is* agent-authored, and
-   the ADR's conditions are binding: every line carries an `author` field, `validate.py` rejects a
-   line without one, and every `results/*.json` carries `golden_set_author`. Read the ADR's
-   inflation table before quoting any number. A human writing `golden_qa.v2.jsonl` is still the
-   goal, not a nice-to-have — the ADR names the triggers.
+6. **The golden set is agent-authored**, under
+   [ADR-0004](docs/adr/0004-agent-authored-golden-set.md). Its conditions are binding: every line
+   carries an `author` field, `validate.py` rejects a line without one, and every `results/*.json`
+   carries `golden_set_author`. **Read the ADR's inflation table before quoting any number.** A
+   human writing `golden_qa.v2.jsonl` is still the goal, not a nice-to-have — the ADR names the
+   triggers.
 7. **Every technical decision with a trade-off → write one ADR** in `docs/adr/NNNN-title.md`
    (Context / Decision / Consequences). Do not argue it out in commit messages.
 8. **Every number must be written to `results/*.json` and committed.** No verbal reporting. From
@@ -150,23 +143,26 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
 9. Commit per phase: `feat(phase-2): sync ingest pipeline`.
 10. Secrets live only in `.env` (already gitignored). `.env.example` is committed with empty values.
 11. **A phase is not finished until `docs/progress/phase-N.md` exists**, with its row added to the
-    `docs/progress.md` index. Write it before the phase commit and include it in that same commit.
-    Five things, every time: what was built, the command output proving the Definition of Done,
-    deviations from PLAN.md and why, open items — especially anything blocked on a human — and a
-    closing **"What you can do after this phase"** section. Rule 8 applies here too: the evidence
-    goes in the file, not only into the chat. The next session starts with these files and
-    remembers nothing else.
-12. **Every phase entry ends with "What you can do after this phase"**, in five parts, matching the
-    shape already in `docs/progress/phase-{0,1,2}.md`:
-    - **Available** — what exists and runs now, and what explicitly does *not* yet.
-    - **Commands that work at this point** — a copy-pasteable block of only the commands that
-      actually work after this phase, plus the useful SQL / `curl` calls. Do not list a command
-      from a later phase.
-    - **Technical, possible now** and **Non-technical, possible now** — what a person can do with
-      the phase's output, including the review, decision and naming steps only a human can take.
-    - **Notice** — the traps: destructive flags, things that look fine but fail later, silent
-      failure modes.
-    - **For the next phase (N+1)** — what the next session must know before it starts writing code.
+    `docs/progress.md` index, in the same commit as the code. Five sections: what was built · the
+    command output proving the Definition of Done · deviations from PLAN.md and why · open items,
+    especially anything **blocked on a human** · **"What you can do after this phase"** (rule 12).
+    Rule 8 applies here too — the evidence goes in the file, not only into the chat. The next
+    session starts with these files and remembers nothing else.
+12. **Every phase entry ends with "What you can do after this phase"**, in five parts, matching
+    `docs/progress/phase-{0,1,2}.md`: **Available** · **Commands that work at this point**
+    (copy-pasteable, nothing from a later phase) · **Technical / Non-technical, possible now**
+    (including what only a human can decide) · **Notice** (the traps) · **For the next phase
+    (N+1)**.
+13. **`/phase-done N` is how 11 and 12 get done** — it holds the full procedure, checks → entry →
+    index → commit, and the detail of what each section must contain.
+14. **Keep this file true, not historical.** When a rule here is superseded, rewrite it and let the
+    ADR carry the history. No strike-throughs, no "originally / as built" columns.
+15. **`old_code/` is off-limits.** Do not read, grep, list or edit anything under it as part of
+    normal work — it is legacy notes kept in the repo for reference only, and reading it burns
+    context for nothing. Touch it *only*
+    when the user names it explicitly in a request ("look in old_code for X"), and then read only
+    the specific files needed. It is never a source of truth: `PLAN.md`, `docs/` and the code in
+    `backend/` are.
 
 ## 6. Code conventions
 
@@ -200,3 +196,9 @@ make lint        # ruff + mypy
 ```
 
 Python commands run from `backend/`. The Makefile at root handles the `cd`.
+
+Slash commands in `.claude/commands/`:
+
+| Command | Does |
+|---|---|
+| `/phase-done N` | closes out phase N: DoD checks → `docs/progress/phase-N.md` → index → commit (rules 8–12) |
