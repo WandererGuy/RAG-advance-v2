@@ -6,19 +6,16 @@ lược bỏ và ghi lại ở mục 0 để không phải đọc chéo hai file
 Trạng thái tính đến 2026-08-12, commit `14880f9`. Ký hiệu giữ nguyên như file 6
 (✅ đã có code · 📋 đã trong PLAN Phase 6 · 💡 ý tưởng mới · ⚠️ có nhưng không như tên gọi).
 
-cho người dùng upload file cá nhân , lưu file trên s3 hoặc thư mục /tmp (nhớ ignore khi commit), show progress upload file hoặc 1 trang riêng upload file và upload progress (vì file cần ingest và embed vào db)
+Ý tưởng mới của Mạnh `=))`
+- Cho người dùng upload file cá nhân, lưu file trên S3 hoặc thư mục `/tmp` (nhớ ignore khi commit), show progress upload file hoặc 1 trang riêng upload file và upload progress (vì file cần ingest và embed vào DB)
+- Judge model LLM-as-judge nên là model khác thông minh hơn hoặc khác provider để khách quan
+- Cải thiện golden dataset: các chỉ số đang nói nhiều thứ, ví dụ như golden dataset quá sạch và câu hỏi được lấy từ đọc corpus, nên thêm do người viết
+- Quan trọng: các sản phẩm thường có điều kiện nghiệm thu POC, MVP, cần specify nó ra
+- Nếu tự tạo 1 tool/frontend để tạo golden dataset thì cũng rất hay, dù manual hay AI generate, rồi người có thể xác nhận, rồi luồng RAG này chạy tự động và sinh điểm
+- Xử lí golden dataset bị outdate thông tin kiểu gì?
+- Làm cho code trở nên OOP hơn, hiện tại nhiều function đơn lẻ quá chăng
+- Thêm observability như Langfuse hoặc Langsmith
 
-judge model LLM-as-judge nên là model khác thông minh hơn hoặc khác provider để khách quan
-
-cải thiện golden dataset : các chỉ số đang nói nhiều thứ, ví dụ như golden dataset quá sạch và câu hỏi được lấy từ đọc corpus, nên thêm do người viết 
-
-Quan trọng, các sản phẩm thường có điều kiện nghiệm thu POC, MVP , cần specify nó ra.
-
-Nếu tự tạo 1 tool / frontend để tạo golden dataset tự cũng rất hay dù manual hay ai generate , rồi người có thể xác nhận , rồi luồng rag này chạy tự động và sinh điểm . 
-
-Xử lí golden dataset bị outdate thông tin kiểu gì?
-
-Làm cho code trở nên OOP hơn , hiện tại nhiều function đơn lẻ quá chăng
 ---
 
 ## 0. Cái gì trong `suggestion_rag.txt` đã có sẵn trong file 6
