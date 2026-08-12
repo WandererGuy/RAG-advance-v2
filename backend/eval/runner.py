@@ -34,7 +34,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from app.core.config import PipelineConfig, get_settings
+from app.core.config import PipelineConfig
 from app.core.exceptions import PipelineNotFound
 from app.core.logging import configure_logging, get_logger
 from app.db.session import dispose_engine, session_scope
@@ -448,9 +448,13 @@ async def _run(
     *,
     judge: generation.Judge | None,
 ) -> tuple[list[QuestionRun], PipelineConfig]:
-    config = get_settings().pipeline_config(retriever="dense")
+    # No config is supplied: each pipeline's `build()` names its own retriever, and the runner
+    # must not overrule it. This used to pass `retriever="dense"` — correct while dense was the
+    # only retriever, and a mislabelling bug the moment `hybrid-v2` arrived, because the run
+    # really was hybrid while `results/hybrid-v2.json` said `"retriever": "dense"`. A results
+    # file that misreports its own configuration defeats the reason the config is in there.
     try:
-        return await run_questions(pipeline_name, records, config=config, judge=judge)
+        return await run_questions(pipeline_name, records, config=None, judge=judge)
     finally:
         await dispose_engine()
 
