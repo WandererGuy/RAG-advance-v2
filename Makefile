@@ -1,4 +1,4 @@
-.PHONY: help up down logs psql install migrate revision api ingest find validate eval report test lint fmt
+.PHONY: help up down logs psql install migrate revision api ingest reembed find validate eval report test lint fmt
 .DEFAULT_GOAL := help
 
 BACKEND := backend
@@ -33,6 +33,9 @@ api:  ## run the API with reload
 
 ingest:  ## ingest the corpus: make ingest [P=../data/raw] [FORCE=1]
 	cd $(BACKEND) && $(UV) run python -m scripts.ingest_corpus --path $(or $(P),../data/raw) $(if $(FORCE),--force,)
+
+reembed:  ## re-embed all chunks in place after an embedding-model change: make reembed [ARGS=--dry-run]
+	cd $(BACKEND) && $(UV) run python -m scripts.reembed_corpus $(ARGS)
 
 find:  ## look up chunk ids for the golden set: make find Q="phụ cấp"
 	cd $(BACKEND) && $(UV) run python -m scripts.find_chunks --q "$(Q)"

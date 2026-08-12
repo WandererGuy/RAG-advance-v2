@@ -22,8 +22,8 @@ document-level permissions, OCR, Qdrant.
 ## Stack
 
 Python 3.12 (`uv`) · FastAPI · PostgreSQL 16 + pgvector, async via SQLAlchemy 2.x + `asyncpg` ·
-Alembic · PyMuPDF · LiteLLM, with the LLM and embedding model read from `.env` — currently Gemini
-(`gemini-3.6-flash`, `gemini-embedding-001` at 768 dim) · Jinja2 prompts · pytest.
+Alembic · PyMuPDF · LiteLLM, with the LLM and embedding model read from `.env` — currently OpenAI
+(`gpt-5.6-luna`, `text-embedding-3-large` at 768 dim) · Jinja2 prompts · pytest.
 
 Celery + Redis, Chonkie and LangChain / LangGraph are deliberately not in v1; they can be added
 later. See [ADR-0002](docs/adr/0002-tech-stack-resolution.md) for the reasoning and the trigger for
@@ -51,7 +51,7 @@ curl localhost:8000/api/v1/health   # -> {"status":"ok","database":"up"}
 ### From scratch on a fresh machine
 
 ```bash
-cp .env.example .env    # fill DEFAULT_LLM_API_KEY + EMBEDDING_API_KEY (Gemini)
+cp .env.example .env    # fill DEFAULT_LLM_API_KEY + EMBEDDING_API_KEY (OpenAI)
 make install            # uv sync --extra dev
 make up                 # docker compose up -d --wait
 make migrate            # alembic upgrade head
@@ -64,12 +64,16 @@ All targets run from the repository root — the Makefile handles the `cd backen
 `make report`, `make test`, `make lint`, `make psql`, `make logs`, `make down`, and
 `make ingest FORCE=1` to re-ingest.
 
+After changing the embedding model, use `make reembed` — **not** `make ingest FORCE=1`. It
+re-embeds every chunk in place, so chunk ids and the corpus lock survive
+([ADR-0008](docs/adr/0008-provider-migration-to-openai.md)).
+
 `make ingest FORCE=1` reassigns chunk ids, which invalidates the golden set's
 `relevant_chunk_ids`. The corpus is frozen and `make validate` now fails loudly when that happens
 — see [ADR-0005](docs/adr/0005-frozen-corpus-for-the-golden-set.md).
 
-`make eval` calls the provider roughly three times per question (one answer, two judgements).
-On the Gemini free tier that is more than a day's quota for one run.
+`make eval` calls the provider roughly three times per question (one answer, two judgements) —
+about 82 calls for the 29-question golden set, on a metered OpenAI key.
 
 Progress index: [docs/progress.md](docs/progress.md) — phase status, what is blocked on a human,
 and a link to the per-phase entry in [docs/progress/](docs/progress/) holding the verification

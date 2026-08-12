@@ -36,15 +36,23 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # --- LLM, via LiteLLM. Provider is never hardcoded; see ADR-0002. ---
-    default_llm_provider: str = "GEMINI"
-    default_llm_model_name: str = "gemini-3.6-flash"
+    default_llm_provider: str = "OPENAI"
+    default_llm_model_name: str = "gpt-5.6-luna"
     default_llm_api_key: str = ""
     default_llm_api_base: str = ""
     default_llm_custom_provider: str = ""
+    llm_supports_temperature: bool = Field(
+        default=True,
+        description=(
+            "False when the model rejects an explicit temperature (gpt-5.6-luna 400s on "
+            "anything but its default of 1). The client then omits the parameter and every "
+            "results file records temperature: null. See ADR-0008."
+        ),
+    )
 
     # --- Embedding ---
-    embedding_provider: str = "GEMINI"
-    embedding_model_name: str = "gemini-embedding-001"
+    embedding_provider: str = "OPENAI"
+    embedding_model_name: str = "text-embedding-3-large"
     embedding_api_key: str = ""
     embedding_dimensions: int = 768
 
@@ -57,7 +65,7 @@ class Settings(BaseSettings):
 
     @property
     def llm_model(self) -> str:
-        """LiteLLM model identifier, e.g. "gemini/gemini-3.6-flash"."""
+        """LiteLLM model identifier, e.g. "openai/gpt-5.6-luna"."""
         return f"{self.default_llm_provider.lower()}/{self.default_llm_model_name}"
 
     @property
@@ -75,6 +83,7 @@ class Settings(BaseSettings):
             embedding_model=self.embedding_model,
             embedding_dimensions=self.embedding_dimensions,
             llm_model=self.llm_model,
+            temperature=0.0 if self.llm_supports_temperature else None,
             prompt_version=self.prompt_version,
         )
         return replace_config(base, **overrides)
@@ -96,6 +105,9 @@ class PipelineConfig:
     embedding_model: str
     embedding_dimensions: int
     llm_model: str
+    # None means the model refuses an explicit temperature and the parameter was omitted, so
+    # the run used the provider's default (ADR-0008). Never write 0.0 here to mean "we tried".
+    temperature: float | None
     prompt_version: str
 
     def to_dict(self) -> dict[str, Any]:

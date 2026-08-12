@@ -32,9 +32,10 @@ def _cfg(size: int = 800, overlap: int = 100) -> PipelineConfig:
         chunk_overlap=overlap,
         top_k=5,
         retriever="dense",
-        embedding_model="gemini/gemini-embedding-001",
+        embedding_model="openai/text-embedding-3-large",
         embedding_dimensions=768,
-        llm_model="gemini/gemini-3.6-flash",
+        llm_model="openai/gpt-5.6-luna",
+        temperature=None,
         prompt_version="v1",
     )
 

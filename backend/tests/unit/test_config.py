@@ -13,9 +13,10 @@ def _config(**overrides: object) -> PipelineConfig:
         "chunk_overlap": 100,
         "top_k": 5,
         "retriever": "dense",
-        "embedding_model": "gemini/gemini-embedding-001",
+        "embedding_model": "openai/text-embedding-3-large",
         "embedding_dimensions": 768,
-        "llm_model": "gemini/gemini-3.6-flash",
+        "llm_model": "openai/gpt-5.6-luna",
+        "temperature": None,
         "prompt_version": "v1",
     }
     return PipelineConfig(**{**base, **overrides})  # type: ignore[arg-type]
@@ -33,6 +34,19 @@ def test_to_dict_is_json_serializable() -> None:
     import json
 
     assert json.loads(json.dumps(_config().to_dict()))["retriever"] == "dense"
+
+
+def test_temperature_null_survives_serialization() -> None:
+    """`null` in a results file means the parameter was omitted, not that it was 0.
+
+    ADR-0008: gpt-5.6-luna rejects an explicit temperature, so the client omits it and the run
+    uses the provider's default. A results file recording 0.0 there would claim a
+    reproducibility property the run did not have.
+    """
+    import json
+
+    assert json.loads(json.dumps(_config().to_dict()))["temperature"] is None
+    assert json.loads(json.dumps(_config(temperature=0.0).to_dict()))["temperature"] == 0.0
 
 
 def test_replace_returns_a_copy_and_leaves_the_original_alone() -> None:

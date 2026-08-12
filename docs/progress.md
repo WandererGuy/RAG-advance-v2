@@ -13,7 +13,7 @@ to know.
 | 1 — Infrastructure + schema | ✅ done | [progress/phase-1.md](progress/phase-1.md) |
 | 2 — Synchronous ingest | ✅ done — sign-off **agent-executed**, not human-signed | [progress/phase-2.md](progress/phase-2.md) |
 | 3 — Golden set | ✅ done — questions **agent-authored** ([ADR-0004](adr/0004-agent-authored-golden-set.md)) | [progress/phase-3.md](progress/phase-3.md) |
-| 4 — `naive-v1` baseline | 🟨 code complete — **no number committed yet**, blocked on provider quota | [progress/phase-4.md](progress/phase-4.md) |
+| 4 — `naive-v1` baseline | ✅ done — baseline committed, run on OpenAI ([ADR-0008](adr/0008-provider-migration-to-openai.md)) | [progress/phase-4.md](progress/phase-4.md) |
 | 5 — API + thin frontend | ⬜ not started | — |
 | 6 — Improvements | ⬜ not started | — |
 
@@ -22,20 +22,33 @@ to know.
 The corpus is ingested and now **frozen** ([ADR-0005](adr/0005-frozen-corpus-for-the-golden-set.md)):
 8 documents, 34 chunks, 768-dim embeddings, idempotent on re-run. `eval/datasets/golden_qa.v1.jsonl`
 holds 29 questions with verified chunk citations. The build is green (`make lint`, `make validate`,
-`make test` → 131 passed).
+`make test` → 132 passed).
 
-Phase 4's code is complete and proven end to end against the real corpus and the real provider —
-`naive-v1`, the dense retriever, the judge, the runner and the leaderboard all run — but **no
-number has been committed**. `results/` still holds only `.gitkeep`. The provider's free tier
-allows 20 generate-content requests per day per model and one full run needs about 82, so the
-baseline run stopped at question 10 of 29 and nothing partial was saved. Clearing that quota and
-running `make eval P=naive-v1` is the single remaining task of the phase, and Phase 5 should not
-start before it lands.
+**Phase 4 is done: `results/naive-v1.json` is committed.** All 29 questions ran, 0 failures, and
+`results/leaderboard.md` has its first row. The headline numbers — read
+[ADR-0004](adr/0004-agent-authored-golden-set.md) before quoting any of them — are
+`recall@5 0.958 · MRR 0.840 · nDCG@5 0.857` over the 24 answerable questions,
+`faithfulness 5.0 · answer_relevance 4.5` (self-graded), `citation_rate 1.0` with **zero**
+unsupported citations, and `p50 3281 ms`.
 
-Mid-phase the provider retired the configured `gemini-2.5-flash` (404, "no longer available to new
-users"); the answering model is now `gemini-3.6-flash`, pinned and never an alias
-([ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md)). Embeddings were unaffected, so
-the corpus and every chunk id survived untouched.
+The number that matters is the weak one: **`refusal_accuracy` 0.6** — 2 of the 5 `unanswerable`
+questions were not refused. Phase 4 had flagged this metric as never exercised; it now is, and it
+is the worst column in the file. Both misses (`q025`, `q027`) actually *say* the documents do not
+contain the answer and then add adjacent real facts with valid citations, so they are hedged
+partial answers rather than invention — `faithfulness` 5.0 and 0 unsupported citations agree.
+They are counted as hallucinations because `is_refusal()` matches one exact sentence and nothing
+else, which is the deliberate design of [ADR-0006](adr/0006-how-generation-is-scored.md). The
+detector is behaving as specified; the specification did not anticipate a hedge. **This is the
+first thing Phase 6 should attack**, and it is a prompt-or-detector question, not a retrieval one.
+
+**The whole stack moved from Gemini to OpenAI** mid-session, by the project owner's decision:
+`gpt-5.6-luna` and `text-embedding-3-large` at an unchanged 768 dim
+([ADR-0008](adr/0008-provider-migration-to-openai.md), which supersedes ADR-0007). Two
+consequences worth carrying: the 34 chunks were **re-embedded in place** by `make reembed` — an
+UPDATE, never a `FORCE=1` re-ingest — so chunk ids, `corpus.lock.json` and all 29
+`relevant_chunk_ids` survived byte-identical; and `gpt-5.6-luna` **rejects `temperature=0`**, so
+the parameter is omitted and every results file records `temperature: null` rather than claiming a
+reproducibility property the run did not have.
 
 ## Gates taken by the agent — read before quoting anything
 
@@ -57,13 +70,16 @@ because no human was available. Neither is human-signed, and the distinction is 
 
 ## Still blocked on a human
 
-- **The provider quota, and therefore the entire Phase 4 baseline.** The free tier cannot complete
-  one evaluation run in a day (20 requests/day/model vs ~82 needed). The project owner has said
-  they will clear it. Until then no score of this system exists. ([phase-4](progress/phase-4.md))
-- **`backend/.env` is redundant and still on disk** with a duplicate of both API keys. The live
-  config is the repo-root `.env`. Deleting it has been blocked by a permission prompt twice. It is
-  gitignored and was never committed. **As of Phase 4 it also holds a stale model name**, which
-  would resurrect the retired-model 404 for anyone whose tooling reads it.
+- **Nothing blocks Phase 5.** The provider-quota blocker is gone: the OpenAI key is metered, the
+  full run completed, and the baseline is committed.
+- **`backend/.env` is redundant and still on disk.** The live config is the repo-root `.env`, which
+  `config.py` resolves by absolute path, so this file affects nothing. Deleting it has been blocked
+  by a permission prompt three times; it has instead been emptied and replaced with a header saying
+  it is dead. It is gitignored and was never committed. Deleting it for real is a 5-second human
+  task.
+- **Decide what to do about `refusal_accuracy` 0.6** — whether the refusal contract should accept a
+  hedge that names its own uncertainty, or whether the prompt should forbid hedging outright. That
+  is a judgement about what employees should see, not a technical fix, and it belongs to a human.
 
 ## Carried-over open items
 
@@ -79,10 +95,21 @@ Full detail in each phase entry; these are the ones that will bite a later phase
   `answer_relevance` are biased upward; `refusal_accuracy` and every retrieval metric are
   deterministic and are not. The ADR names the triggers for adding an independent judge.
   ([phase-4](progress/phase-4.md))
-- **A model alias is never permitted in `LLM_MODEL`** — `gemini-flash-latest` and friends change
+- **A model alias is never permitted in `LLM_MODEL`** — `gpt-5.1-chat-latest` and friends change
   silently under a frozen pipeline, and the results file would then name a configuration that no
-  longer identifies what ran ([ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md)).
-  Expect the pinned model to be retired in turn; the 404 is information, not a bug.
+  longer identifies what ran ([ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md), rule
+  retained by [ADR-0008](adr/0008-provider-migration-to-openai.md)). Expect the pinned model to be
+  retired in turn; the 404 is information, not a bug.
+- **Changing the embedding model means `make reembed`, never `make ingest FORCE=1`.** A forced
+  re-ingest reassigns chunk ids and silently invalidates every `relevant_chunk_ids` in the golden
+  set. The in-place UPDATE path exists precisely to avoid that, and it is what kept the golden set
+  alive across the OpenAI migration ([ADR-0008](adr/0008-provider-migration-to-openai.md)).
+- **`naive-v1` is now frozen** (CLAUDE.md 4.1): `naive_v1.py`, `answer_v1.jinja` and both judge
+  prompts must not be edited now that a results file is committed. A new idea is a new pipeline
+  with a new name.
+- **The committed baseline was run with a dirty tree** (`git_dirty: true`) — the migration code and
+  the run landed in the same commit, so its `git_sha` names the commit that contains the code
+  rather than a tree that predates it. Later runs should be made from a clean tree.
 - **The `unanswerable` questions and the flattened tables are the two things to watch in Phase 4.**
   `q021` and `q024` aim straight at table content that extraction linearises; a confident answer to
   `q025`–`q029` is a hallucination, not a pass. ([phase-3](progress/phase-3.md))

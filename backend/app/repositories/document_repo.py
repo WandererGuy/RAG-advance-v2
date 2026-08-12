@@ -7,11 +7,11 @@ decide that if this layer stays out of it.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, delete, func, insert, select
+from sqlalchemy import CursorResult, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Chunk, Document, DocumentStatus
@@ -145,6 +145,26 @@ class DocumentRepository:
             return 0
         payload = [{"document_id": document_id, **row} for row in rows]
         await self._session.execute(insert(Chunk), payload)
+        return len(payload)
+
+    async def update_chunk_embeddings(self, vectors: Mapping[int, Sequence[float]]) -> int:
+        """Replace the embedding of existing chunks, keyed by chunk id. Returns rows updated.
+
+        The only supported way to change embedding model without destroying the golden set.
+        `delete_chunks` + `add_chunks` would reassign serial ids, and `relevant_chunk_ids` in
+        `golden_qa.v1.jsonl` are bare integers that would then point at the wrong text — the
+        failure ADR-0005 exists to catch. An UPDATE touches no id, no content and no
+        chunk_index, so `corpus.lock.json` stays valid: re-embedding is not a corpus change.
+        """
+        if not vectors:
+            return 0
+        # ORM "bulk UPDATE by primary key": each row carries `id`, and SQLAlchemy derives the
+        # WHERE from it. An explicit .where(bindparam(...)) instead lands on a different code
+        # path that cannot synchronize the identity map and refuses the executemany outright.
+        payload = [
+            {"id": chunk_id, "embedding": list(vector)} for chunk_id, vector in vectors.items()
+        ]
+        await self._session.execute(update(Chunk), payload)
         return len(payload)
 
     async def count_chunks(self, document_id: int | None = None) -> int:

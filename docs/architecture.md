@@ -54,3 +54,4 @@ See `docs/adr/`. Every trade-off gets one ADR — the argument does not live in 
 - [ADR-0005](adr/0005-frozen-corpus-for-the-golden-set.md) — the corpus is frozen and the freeze is machine-checked
 - [ADR-0006](adr/0006-how-generation-is-scored.md) — a self-grading judge, and a refusal that is not judged
 - [ADR-0007](adr/0007-llm-model-migration-to-gemini-3-6-flash.md) — the answering model is pinned, never an alias
+- [ADR-0008](adr/0008-provider-migration-to-openai.md) — the stack moved to OpenAI; changing embedding model means `make reembed`, never a forced re-ingest

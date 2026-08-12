@@ -1,6 +1,6 @@
 """Text -> vectors, through LiteLLM. The provider is never hardcoded (ADR-0002).
 
-The one trap this module exists to close: **`gemini-embedding-001` returns 3072 dimensions by
+The one trap this module exists to close: **`text-embedding-3-large` returns 3072 dimensions by
 default** while the `chunks.embedding` column is `vector(768)`. Every call therefore passes
 `dimensions` explicitly, and every response is length-checked before it can reach the database —
 a mismatch caught here names the model and both numbers, instead of surfacing as an asyncpg
@@ -19,7 +19,7 @@ from app.core.logging import get_logger
 
 log = get_logger(__name__)
 
-# Gemini accepts up to 100 inputs per embedContent batch; 32 keeps a single failed batch cheap
+# The provider accepts far more inputs per batch than this; 32 keeps a single failed batch cheap
 # to retry and the request body comfortably small.
 BATCH_SIZE = 32
 
@@ -76,8 +76,10 @@ class LiteLLMEmbedder:
     def count_tokens(self, text: str) -> int:
         """Approximate token count, used for `chunks.token_count` and for logging.
 
-        Gemini does not publish a local tokenizer, so this is tiktoken's `cl100k_base` standing
-        in. It is an estimate, not a billing figure, and nothing in the pipeline branches on it.
+        `cl100k_base` is the tokenizer the OpenAI embedding models actually use, so on the
+        current provider this is exact rather than an estimate. It is still not a billing
+        figure, and nothing in the pipeline branches on it — if the provider changes again it
+        silently reverts to being an approximation.
         """
         import tiktoken
 

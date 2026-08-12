@@ -10,6 +10,13 @@ is not a number:
 * **`temperature=0` by default.** Two runs of the same pipeline over the same corpus should
   differ as little as the provider allows. It is not a guarantee — nothing about a hosted model
   is — but a default of 1.0 would make the baseline unrepeatable by construction.
+
+  Some models refuse it: `gpt-5.6-luna` rejects any temperature other than its default of 1 with
+  a 400. `LLM_SUPPORTS_TEMPERATURE=false` then makes the client **omit the parameter entirely**
+  rather than send a value the provider will reject — and, because that costs the one knob
+  holding a run steady, the omission is recorded in every results file as
+  `temperature: null`. See ADR-0008. What is never done is silently substituting 1.0 while the
+  results file still claims 0: that would be a reproducibility loss nobody could see.
 * **A timeout on every call.** `eval/runner.py` makes ~4 calls per question; one request that
   hangs forever would hang the whole run with no partial results written.
 
@@ -75,6 +82,7 @@ class LiteLLMClient:
         self.model = model or settings.llm_model
         self._api_key = settings.default_llm_api_key or None
         self._api_base = settings.default_llm_api_base or None
+        self.supports_temperature = settings.llm_supports_temperature
 
     async def complete(
         self,
@@ -120,9 +128,12 @@ class LiteLLMClient:
         kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": list(messages),
-            "temperature": temperature,
             "timeout": TIMEOUT_SECONDS,
         }
+        # Omitted, not defaulted: a model that rejects temperature 400s on the value rather
+        # than ignoring it, and substituting its default while claiming 0 would hide the loss.
+        if self.supports_temperature:
+            kwargs["temperature"] = temperature
         if self._api_key:
             kwargs["api_key"] = self._api_key
         if self._api_base:

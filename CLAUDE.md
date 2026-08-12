@@ -55,20 +55,25 @@ original wording, [ADR-0002](docs/adr/0002-tech-stack-resolution.md) records why
 | API | FastAPI + uvicorn |
 | PDF | PyMuPDF (`fitz`) — accurate page numbers required |
 | DOCX | `python-docx` |
-| Embedding | `gemini-embedding-001`, **768 dim**, read from `.env` |
-| LLM | read from `.env`, currently `gemini-3.6-flash` via LiteLLM ([ADR-0007](docs/adr/0007-llm-model-migration-to-gemini-3-6-flash.md)). **Pinned, never a moving alias** |
+| Embedding | `text-embedding-3-large`, **768 dim** (native truncation), read from `.env` |
+| LLM | read from `.env`, currently `gpt-5.6-luna` via LiteLLM ([ADR-0008](docs/adr/0008-provider-migration-to-openai.md)). **Pinned, never a moving alias.** It rejects `temperature=0`, so `LLM_SUPPORTS_TEMPERATURE=false` and results files record `temperature: null` |
 | Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames |
 | Frontend | decided in Phase 5 (Streamlit if a demo is all that's needed) |
 | Test | pytest + `pytest-asyncio` |
 
 The vector dimension **768** is written in three places that must change together: `.env`
 (`EMBEDDING_DIMENSIONS`), `app/models/chunk.py` (`EMBEDDING_DIM`), and the initial migration.
-Changing it is a migration plus a full re-ingest plus a re-run of every pipeline.
+Changing it is a migration plus a re-embed plus a re-run of every pipeline.
+
+**Changing the embedding model — even at the same dimension — invalidates every stored vector**,
+because embeddings are only comparable to others from the same model. Re-embed with `make reembed`,
+which UPDATEs the vectors in place. **Never `make ingest FORCE=1`**: that reassigns chunk ids and
+silently invalidates every `relevant_chunk_ids` in the golden set (ADR-0005, ADR-0008).
 
 Deliberately **not** in v1: Celery + Redis, LangChain, LangGraph, Chonkie. Each is rejected in
 ADR-0002 with a named trigger for revisiting. Do not add them without an ADR.
 
-> ✅ **Data is allowed to leave for an external API; Gemini is approved**
+> ✅ **Data is allowed to leave for an external API; OpenAI is approved**
 > ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md), 2026-08-09). Self-hosting is therefore not
 > needed. Do not re-open this on your own — if it is reversed, every embedding and every committed
 > result is invalidated.
@@ -184,6 +189,7 @@ instantiate one itself. Only write `dense.py` in Phase 4; the rest comes in Phas
 make up          # docker compose up -d (postgres + pgvector)
 make migrate     # alembic upgrade head
 make ingest      # python -m scripts.ingest_corpus --path data/raw
+make reembed     # re-embed in place after an embedding-model change (never ingest FORCE=1)
 make find Q="phụ cấp"
                  # python -m scripts.find_chunks --q "…" — chunk ids for the golden set
 make validate    # python -m eval.datasets.validate — golden set + frozen corpus (ADR-0005)

@@ -5,7 +5,7 @@ Read ADR-0006 before quoting any number from this file. Two things in it decide 
 numbers are worth:
 
 * **The judge is the same model that wrote the answer.** There is one provider configured, so
-  `gemini-3.6-flash` grades its own output. That inflates scores in a known direction and is
+  `gpt-5.6-luna` grades its own output. That inflates scores in a known direction and is
   worth doing anyway — a self-graded score still moves when a pipeline gets better, which is
   all Phase 6 needs. `--judge-model` overrides it, and the model used is written into every
   results file.
