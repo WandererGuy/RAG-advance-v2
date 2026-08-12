@@ -121,7 +121,7 @@ Cụm mạnh nhất của repo.
 
 ---
 
-## 5. Software engineering (phần bị loại nhiều nhất ở vòng middle)
+## 5. Software engineering (phần phân loại jun/mid)
 
 | # | Kỹ thuật | TT | Chi tiết |
 |---|---|---|---|
@@ -204,7 +204,7 @@ dimension, không coarse-to-fine two-stage, không shortlist dim thấp rồi re
 > trước tiên — và vì con số 768 nằm ở **ba nơi phải đổi đồng thời** (`.env`, `EMBEDDING_DIM`,
 > migration), đổi nó là một migration cộng full re-ingest cộng chạy lại mọi pipeline.
 
-Câu sau cho thấy hiểu kỹ thuật **và** hiểu chi phí đổi nó. Đó mới là middle.
+Câu sau cho thấy hiểu kỹ thuật **và** hiểu chi phí đổi nó. 
 
 ### 7.2 Các con số phải nói trước khi bị hỏi
 
@@ -240,6 +240,6 @@ Câu sau cho thấy hiểu kỹ thuật **và** hiểu chi phí đổi nó. Đó
 | 7 | Agentic RAG (6.2) / MCP (6.3) | Sau Phase 6, cần ADR |
 | 8 | Docling (6.4) | Đắt nhất — cần ADR + chấp nhận re-ingest |
 
-> **Cảnh báo:** với JD middle, **2 pipeline có số so sánh được đánh bại 8 kỹ thuật kể miệng.**
+> **Cảnh báo:**  **2 pipeline có số so sánh được đánh bại 8 kỹ thuật kể miệng.**
 > Danh sách dài chứng minh bạn đọc nhiều; một dòng thứ hai trong `leaderboard.md` chứng minh
-> bạn **đo được**. Nhà tuyển dụng phân biệt hai thứ đó rất nhanh.
+> bạn **đo được**.
