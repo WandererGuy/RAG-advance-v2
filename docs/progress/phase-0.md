@@ -28,7 +28,9 @@ documents, verified text-based with PyMuPDF (2020 characters off page 1, diacrit
 
 **Available:** documents and decisions only. No code runs yet — there is no `Makefile`, no
 `docker-compose.yml`, no dependencies installed. `backend/` is directories and `.gitkeep` files.
-`data/raw/HR_pdfs/` holds the 8 real PDFs (gitignored, on disk only).
+`data/raw/HR_pdfs/` holds the 8 PDFs. (They were gitignored and on-disk-only at the time of this
+phase; on 2026-08-12 they were confirmed synthetic and committed to the repo — see
+[ADR-0001](../adr/0001-scope-va-data-boundary.md) and `docs/progress.md`.)
 
 **Commands that work at this point:**
 

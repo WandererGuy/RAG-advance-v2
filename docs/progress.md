@@ -20,7 +20,11 @@ to know.
 ## Where the project stands
 
 The corpus is ingested and now **frozen** ([ADR-0005](adr/0005-frozen-corpus-for-the-golden-set.md)):
-8 documents, 34 chunks, 768-dim embeddings, idempotent on re-run. `eval/datasets/golden_qa.v1.jsonl`
+8 documents, 34 chunks, 768-dim embeddings, idempotent on re-run. Since 2026-08-12 the 8 PDFs are
+**committed to the repo** in `data/raw/HR_pdfs/` — they are synthetic demo documents, not real
+company data, so they may be shown and shared freely
+([ADR-0001](adr/0001-scope-va-data-boundary.md)). A fresh clone can `make ingest` with no document
+hunting; the corpus is still frozen, and committing it is not permission to add to it. `eval/datasets/golden_qa.v1.jsonl`
 holds 29 questions with verified chunk citations. The build is green (`make lint`, `make validate`,
 `make test` → 132 passed).
 

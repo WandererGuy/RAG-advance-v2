@@ -6,6 +6,12 @@ Q&A over internal company documents. Users ask in Vietnamese; the system answers
 The corpus for v1 is 8 Vietnamese HR policy documents (handbook, compensation, grading, leave and
 remote work, information security, hiring, code of conduct, travel expenses).
 
+These 8 PDFs are **synthetic demo documents** for a fictional company — not real company data — so
+they are **committed to the repository** in [data/raw/HR_pdfs/](data/raw/HR_pdfs/) and are safe to
+open, show and share ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md)). Clone the repo and
+`make ingest` works with no document hunting. The rest of `data/raw/` stays gitignored, so real
+documents added later are not committed by accident.
+
 ## Scope
 
 **In scope for v1 (Phases 0–5)**

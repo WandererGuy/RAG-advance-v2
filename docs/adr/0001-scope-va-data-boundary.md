@@ -23,8 +23,14 @@ stack would have moved to Ollama + `bge-m3` and this ADR would have been superse
 
 **2. Do we have 20–50 real documents?** — **No, we have 8**, and 8 was accepted as sufficient for
 v1. They are in `data/raw/HR_pdfs/`: employee handbook, compensation, grading and appraisal, leave
-and remote work, information security, hiring and probation, code of conduct, travel expenses. All
-are internal HR policy documents from Công ty Cổ phần Công nghệ Vector.
+and remote work, information security, hiring and probation, code of conduct, travel expenses. They
+are HR policy documents for a fictional Công ty Cổ phần Công nghệ Vector.
+
+**These 8 PDFs are synthetic demo documents, not real company data.** They are therefore
+**committed to the repository** and may be shown, shared and read freely — in a demo, in a
+screenshot, in a bug report. `data/raw/HR_pdfs/` is un-ignored in `.gitignore` for exactly this
+reason, while the rest of `data/raw/` stays ignored so that a real document dropped in later is
+never committed by accident. Confirmed by the owner on 2026-08-12.
 
 Consequence accepted: a small corpus makes retrieval metrics noisier and inflates recall@k, because
 there are fewer distractor chunks to confuse the retriever than there would be in production. The

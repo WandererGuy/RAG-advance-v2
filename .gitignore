@@ -4,9 +4,12 @@
 !.env.example
 !.env.*.example
 
-# corpus — real documents stay out of git; data/samples/ is the committed exception
+# corpus — data/raw/ is ignored by default, so a real document dropped in never
+# lands in a commit by accident. data/raw/HR_pdfs/ is the deliberate exception:
+# it is the synthetic v1 demo corpus and is committed and safe to show (ADR-0001).
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/HR_pdfs/
 !data/samples/
 
 # python

@@ -73,6 +73,13 @@ silently invalidates every `relevant_chunk_ids` in the golden set (ADR-0005, ADR
 Deliberately **not** in v1: Celery + Redis, LangChain, LangGraph, Chonkie. Each is rejected in
 ADR-0002 with a named trigger for revisiting. Do not add them without an ADR.
 
+**The corpus is synthetic and committed.** The 8 Vietnamese HR PDFs in `data/raw/HR_pdfs/` are demo
+documents for a fictional company, not real company data. They are **in git** and may be shown,
+quoted and shared freely — in docs, screenshots or bug reports ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md)).
+`.gitignore` un-ignores that one directory and keeps the rest of `data/raw/` ignored, so a *real*
+document added later is still not committed by accident. Nothing else about the corpus changes: it
+is still frozen under ADR-0005, and being committed is not permission to add to it.
+
 > ✅ **Data is allowed to leave for an external API; OpenAI is approved**
 > ([ADR-0001](docs/adr/0001-scope-va-data-boundary.md), 2026-08-09). Self-hosting is therefore not
 > needed. Do not re-open this on your own — if it is reversed, every embedding and every committed
