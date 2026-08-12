@@ -18,13 +18,13 @@
   ],
   "judge_model": "openai/gpt-5.6-luna",
   "judge_is_answer_model": true,
-  "git_sha": "8ce76a322c25971ea8b8db3f458c703f9ca839d8",
+  "git_sha": "f4ab0d446280be1873b43f6db0de502977a26c15",
   "git_dirty": true,
-  "timestamp": "2026-08-12T17:04:23+00:00",
+  "timestamp": "2026-08-12T17:32:10+00:00",
   "corpus_validated": true,
   "question_count": 29,
   "failed_questions": 0,
-  "elapsed_seconds": 240.8,
+  "elapsed_seconds": 154.2,
   "metrics": {
     "retrieval": {
       "recall@5": 0.9583,
@@ -34,35 +34,35 @@
       "questions_excluded": 5
     },
     "faithfulness": {
-      "mean": 5.0,
+      "mean": 4.8966,
       "scored": 29,
       "failed": 0
     },
     "answer_relevance": {
-      "mean": 4.5,
+      "mean": 4.25,
       "scored": 24,
       "failed": 0
     },
-    "refusal_accuracy": 0.6,
+    "refusal_accuracy": 1.0,
     "over_refusal_rate": 0.0417,
     "outcomes": {
       "answered": 23,
-      "correct_refusal": 3,
-      "hallucinated": 2,
+      "correct_refusal": 5,
+      "hallucinated": 0,
       "over_refusal": 1
     },
     "judge_failures": 0,
     "citations": {
-      "answers_considered": 25,
-      "answers_with_citation": 25,
+      "answers_considered": 23,
+      "answers_with_citation": 23,
       "citation_rate": 1.0,
       "unsupported_citations": 0,
       "answers_with_unsupported_citation": 0
     },
     "latency_ms": {
-      "p50": 3281,
-      "p95": 9238,
-      "max": 17722
+      "p50": 2009,
+      "p95": 4112,
+      "max": 6600
     }
   },
   "questions": [
@@ -129,10 +129,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 6245,
-      "retrieval_ms": 4373,
-      "generation_ms": 1866,
-      "answer": "10:00. [01_so_tay_nhan_vien.pdf, p.1]",
+      "latency_ms": 6600,
+      "retrieval_ms": 4963,
+      "generation_ms": 1631,
+      "answer": "10:00 là giờ muộn nhất phải có mặt trong khung giờ bắt buộc (core hours). [01_so_tay_nhan_vien.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -143,11 +143,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer states that everyone must be present by 10:00, which is directly supported by the core-hours policy in the cited document."
+        "reason": "The answer is fully supported: the context states that the mandatory core-hours presence begins at 10:00."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer gives the correct latest morning arrival time, 10:00, matching the reference."
+        "reason": "The answer correctly states that 10:00 is the latest required arrival time, matching the reference."
       }
     },
     {
@@ -212,9 +212,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1728,
-      "retrieval_ms": 388,
-      "generation_ms": 1339,
+      "latency_ms": 2081,
+      "retrieval_ms": 673,
+      "generation_ms": 1408,
       "answer": "Quên chấm công quá 03 lần trong một tháng sẽ bị trừ 0,5 ngày phép. [01_so_tay_nhan_vien.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
@@ -226,11 +226,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer exactly matches the context: forgetting to record working time more than 03 times in a month results in a deduction of 0.5 day of leave."
+        "reason": "The answer exactly matches the policy stating that forgetting to record attendance more than 03 times in a month results in a deduction of 0.5 days of leave."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer matches the reference: forgetting to record attendance more than 3 times in a month results in a deduction of 0.5 day of leave."
+        "reason": "Câu trả lời nêu đúng điều kiện quá 03 lần trong một tháng và mức trừ 0,5 ngày phép."
       }
     },
     {
@@ -288,9 +288,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1082,
-      "retrieval_ms": 294,
-      "generation_ms": 787,
+      "latency_ms": 1804,
+      "retrieval_ms": 377,
+      "generation_ms": 1427,
       "answer": "Không tìm thấy thông tin trong tài liệu.",
       "outcome": "over_refusal",
       "retrieval": {
@@ -302,11 +302,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The documents do not state any monthly lunch allowance, so saying the information cannot be found is fully supported."
+        "reason": "The answer correctly states that the documents do not provide information about a monthly lunch allowance."
       },
       "answer_relevance": {
         "score": 1,
-        "reason": "Câu trả lời không cung cấp mức hỗ trợ tiền bữa trưa, trong khi thông tin là 1.100.000 đồng/tháng."
+        "reason": "Câu trả lời không cung cấp mức hỗ trợ bữa trưa, trong khi tài liệu nêu rõ là 1.100.000 đồng/tháng."
       }
     },
     {
@@ -339,42 +339,42 @@
           "chunk_id": 3,
           "filename": "01_so_tay_nhan_vien.pdf",
           "page_no": 1,
-          "score": 0.495003,
+          "score": 0.495066,
           "rank": 1
         },
         {
           "chunk_id": 32,
           "filename": "08_cong_tac_phi.pdf",
           "page_no": 1,
-          "score": 0.450892,
+          "score": 0.450969,
           "rank": 2
         },
         {
           "chunk_id": 31,
           "filename": "08_cong_tac_phi.pdf",
           "page_no": 1,
-          "score": 0.421325,
+          "score": 0.421333,
           "rank": 3
         },
         {
           "chunk_id": 6,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 1,
-          "score": 0.380176,
+          "score": 0.380278,
           "rank": 4
         },
         {
           "chunk_id": 8,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 2,
-          "score": 0.371549,
+          "score": 0.37168,
           "rank": 5
         }
       ],
-      "latency_ms": 1818,
-      "retrieval_ms": 369,
-      "generation_ms": 1449,
-      "answer": "12.000.000 đồng/người/năm cho các khóa học, hội thảo và chứng chỉ liên quan tới công việc. [01_so_tay_nhan_vien.pdf, p.1]",
+      "latency_ms": 2261,
+      "retrieval_ms": 1034,
+      "generation_ms": 1227,
+      "answer": "12.000.000 đồng/người/năm cho các khóa học, hội thảo, chứng chỉ liên quan tới công việc. [01_so_tay_nhan_vien.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -385,11 +385,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer states the annual training budget of 12,000,000 đồng per employee for work-related courses, seminars, and certifications, exactly as supported by the context."
+        "reason": "The answer exactly states the context's 12,000,000 đồng per employee per year budget for work-related courses, workshops, and certifications, with a valid citation."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer matches the reference figure and specifies the same eligible uses: courses, workshops, and work-related certifications."
+        "reason": "The answer gives the correct amount of 12,000,000 đồng per person per year and correctly specifies its use for work-related courses, workshops, and certifications."
       }
     },
     {
@@ -454,10 +454,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 3281,
-      "retrieval_ms": 415,
-      "generation_ms": 2866,
-      "answer": "Cộng thêm 30% cho thời gian làm thêm ban đêm từ 22:00 đến 06:00, cộng vào hệ số tương ứng. [02_quy_che_luong_thuong_phuc_loi.pdf, p.1]",
+      "latency_ms": 1835,
+      "retrieval_ms": 411,
+      "generation_ms": 1423,
+      "answer": "Cộng thêm 30% khi làm thêm ban đêm từ 22:00 đến 06:00, áp dụng trên hệ số làm thêm tương ứng. [02_quy_che_luong_thuong_phuc_loi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -468,11 +468,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer is fully supported: the context states that overtime at night from 22:00 to 06:00 receives an additional 30%, added to the applicable overtime coefficient."
+        "reason": "The answer is fully supported by the context, which states that overtime worked at night from 22:00 to 06:00 receives an additional 30% added to the corresponding overtime coefficient."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer gives the correct 30% addition, the 22:00–06:00 nighttime period, and states that it is added to the corresponding coefficient."
+        "reason": "The answer correctly states the 30% addition, the applicable nighttime hours of 22:00–06:00, and that it is applied to the corresponding overtime coefficient."
       }
     },
     {
@@ -505,42 +505,42 @@
           "chunk_id": 7,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 1,
-          "score": 0.61364,
+          "score": 0.613638,
           "rank": 1
         },
         {
           "chunk_id": 11,
           "filename": "03_khung_cap_bac_va_danh_gia.pdf",
           "page_no": 1,
-          "score": 0.597911,
+          "score": 0.597354,
           "rank": 2
         },
         {
           "chunk_id": 6,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 1,
-          "score": 0.536599,
+          "score": 0.53662,
           "rank": 3
         },
         {
           "chunk_id": 8,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 2,
-          "score": 0.527314,
+          "score": 0.527418,
           "rank": 4
         },
         {
           "chunk_id": 12,
           "filename": "03_khung_cap_bac_va_danh_gia.pdf",
           "page_no": 1,
-          "score": 0.51877,
+          "score": 0.518651,
           "rank": 5
         }
       ],
-      "latency_ms": 1579,
-      "retrieval_ms": 399,
-      "generation_ms": 1179,
-      "answer": "Hệ số thưởng cá nhân là **0**. [02_quy_che_luong_thuong_phuc_loi.pdf, p.1]",
+      "latency_ms": 1811,
+      "retrieval_ms": 556,
+      "generation_ms": 1254,
+      "answer": "0 [02_quy_che_luong_thuong_phuc_loi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -551,11 +551,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer states that the personal bonus coefficient for the \"Không đạt (D)\" rating is 0, exactly as shown in the context."
+        "reason": "The answer states that the personal bonus coefficient for the Không đạt (D) rating is 0, exactly as specified in the context."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer gives the correct individual bonus coefficient of 0 for a Không đạt rating."
+        "reason": "The answer gives the correct individual bonus coefficient for a Không đạt rating: 0."
       }
     },
     {
@@ -620,9 +620,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 4191,
-      "retrieval_ms": 398,
-      "generation_ms": 3792,
+      "latency_ms": 1858,
+      "retrieval_ms": 496,
+      "generation_ms": 1361,
       "answer": "8.000.000 đồng, chi trả sau khi ứng viên qua thử việc 60 ngày. [02_quy_che_luong_thuong_phuc_loi.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
@@ -634,11 +634,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "Every claim in the answer is explicitly supported by the context."
+        "reason": "The answer states that introducing a candidate for an engineering position earns 8,000,000 đồng, paid after the candidate passes the 60-day probation, exactly as supported by the context."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "Câu trả lời nêu đúng mức thưởng 8.000.000 đồng và điều kiện chi trả sau khi ứng viên hoàn tất thử việc 60 ngày."
+        "reason": "Câu trả lời nêu đúng mức thưởng 8.000.000 đồng và điều kiện chi trả sau khi ứng viên qua thử việc 60 ngày."
       }
     },
     {
@@ -703,9 +703,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1570,
-      "retrieval_ms": 428,
-      "generation_ms": 1142,
+      "latency_ms": 1544,
+      "retrieval_ms": 398,
+      "generation_ms": 1145,
       "answer": "Tháng 4 hằng năm. [02_quy_che_luong_thuong_phuc_loi.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
@@ -717,11 +717,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer is fully supported by the context, which states that the company reviews salaries once a year in April."
+        "reason": "The answer states that the company reviews salaries annually in April, exactly as supported by the context."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer correctly states that the company reviews salaries every April, matching the reference."
+        "reason": "Câu trả lời nêu đúng tháng 4 hằng năm, phù hợp hoàn toàn với đáp án tham chiếu."
       }
     },
     {
@@ -786,10 +786,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1415,
-      "retrieval_ms": 241,
-      "generation_ms": 1173,
-      "answer": "Nghỉ liên tục từ 05 ngày trở lên phải đăng ký trước 15 ngày và được Trưởng bộ phận phê duyệt. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]",
+      "latency_ms": 2009,
+      "retrieval_ms": 389,
+      "generation_ms": 1619,
+      "answer": "Nghỉ liền một tuần phải đăng ký trước tối thiểu 15 ngày và được Trưởng bộ phận phê duyệt. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -800,11 +800,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer is fully supported: leave taken continuously for 05 days or more must be registered 15 days in advance and approved by the department head."
+        "reason": "The answer is fully supported: leave taken continuously for five days or more must be registered at least 15 days in advance and approved by the department head, so one week qualifies."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer matches the reference: taking leave continuously for at least 5 days requires registration 15 days in advance and approval from the department head."
+        "reason": "The answer correctly states that taking a continuous week off requires registration at least 15 days in advance and approval from the department head."
       }
     },
     {
@@ -869,10 +869,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1539,
-      "retrieval_ms": 431,
-      "generation_ms": 1107,
-      "answer": "36 tháng/lần, hoặc sớm hơn nếu thiết bị hỏng không sửa được. [05_bao_mat_thong_tin_va_thiet_bi.pdf, p.1]",
+      "latency_ms": 2073,
+      "retrieval_ms": 918,
+      "generation_ms": 1155,
+      "answer": "36 tháng một lần, hoặc sớm hơn nếu thiết bị hỏng không sửa được. [05_bao_mat_thong_tin_va_thiet_bi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -883,11 +883,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer exactly states that the laptop replacement cycle is 36 months, or earlier if the device is irreparably damaged, as supported by the cited context."
+        "reason": "The answer exactly states that the replacement cycle is 36 months, or earlier if the device is damaged beyond repair, as specified in the context."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer states a 36-month replacement cycle and allows earlier replacement if the device cannot be repaired, matching the reference exactly."
+        "reason": "The answer matches the reference: laptops are replaced every 36 months, or earlier if they are damaged beyond repair."
       }
     },
     {
@@ -953,9 +953,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 4386,
-      "retrieval_ms": 508,
-      "generation_ms": 3877,
+      "latency_ms": 3360,
+      "retrieval_ms": 2063,
+      "generation_ms": 1297,
       "answer": "12 ký tự. [05_bao_mat_thong_tin_va_thiet_bi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
@@ -967,11 +967,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer states that work-account passwords must be at least 12 characters, which is explicitly supported by the context."
+        "reason": "The answer states that work-account passwords must be at least 12 characters, exactly as specified in the context."
       },
       "answer_relevance": {
         "score": 4,
-        "reason": "The answer correctly states the minimum length of 12 characters but omits the condition that the password must not have been used in the preceding 12 months."
+        "reason": "The answer correctly states the minimum length of 12 characters but omits the condition that the password must not have been used in the previous 12 months."
       }
     },
     {
@@ -1036,10 +1036,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1385,
-      "retrieval_ms": 195,
-      "generation_ms": 1190,
-      "answer": "Trong vòng **04 giờ kể từ khi phát hiện mất hoặc bị đánh cắp**. [05_bao_mat_thong_tin_va_thiet_bi.pdf, p.1]",
+      "latency_ms": 1547,
+      "retrieval_ms": 419,
+      "generation_ms": 1127,
+      "answer": "Trong vòng 04 giờ kể từ khi phát hiện. [05_bao_mat_thong_tin_va_thiet_bi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1050,11 +1050,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer exactly states that a lost or stolen device must be reported to IT within 04 hours of discovery, as supported by the cited context."
+        "reason": "The answer exactly matches the context, which requires reporting a lost or stolen device to IT within 04 hours of discovery."
       },
       "answer_relevance": {
         "score": 4,
-        "reason": "Nêu đúng thời hạn 04 giờ kể từ khi phát hiện, nhưng thiếu điều kiện phải báo qua kênh khẩn cấp được công bố trên mạng nội bộ."
+        "reason": "The answer gives the required four-hour deadline from discovery but omits that the report must be made through the emergency channel published on the intranet."
       }
     },
     {
@@ -1087,42 +1087,42 @@
           "chunk_id": 4,
           "filename": "01_so_tay_nhan_vien.pdf",
           "page_no": 2,
-          "score": 0.713649,
+          "score": 0.713635,
           "rank": 1
         },
         {
           "chunk_id": 15,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 1,
-          "score": 0.538183,
+          "score": 0.538196,
           "rank": 2
         },
         {
           "chunk_id": 24,
           "filename": "06_tuyen_dung_va_thu_viec.pdf",
           "page_no": 1,
-          "score": 0.510984,
+          "score": 0.511036,
           "rank": 3
         },
         {
           "chunk_id": 29,
           "filename": "07_quy_tac_ung_xu.pdf",
           "page_no": 2,
-          "score": 0.509188,
+          "score": 0.509203,
           "rank": 4
         },
         {
           "chunk_id": 16,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 1,
-          "score": 0.50304,
+          "score": 0.503023,
           "rank": 5
         }
       ],
-      "latency_ms": 17722,
-      "retrieval_ms": 554,
-      "generation_ms": 17166,
-      "answer": "45 ngày. [01_so_tay_nhan_vien.pdf, p.2]",
+      "latency_ms": 1757,
+      "retrieval_ms": 417,
+      "generation_ms": 1340,
+      "answer": "45 ngày [01_so_tay_nhan_vien.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1133,11 +1133,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The context states that positions from Team Leader level and above must give 45 days' notice regardless of contract type, fully supporting the answer."
+        "reason": "The context states that positions from Trưởng nhóm upward must give 45 days' notice regardless of contract type, so the answer is fully supported."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "Câu trả lời nêu đúng thời hạn báo trước là 45 ngày, phù hợp với điều kiện áp dụng cho Trưởng nhóm trong đáp án tham chiếu."
+        "reason": "The answer gives the correct notice period of 45 days for a team leader on a fixed-term contract."
       }
     },
     {
@@ -1202,9 +1202,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 8641,
-      "retrieval_ms": 405,
-      "generation_ms": 8236,
+      "latency_ms": 1692,
+      "retrieval_ms": 508,
+      "generation_ms": 1184,
       "answer": "Khai báo với quản lý trực tiếp trong vòng 07 ngày. [07_quy_tac_ung_xu.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
@@ -1220,7 +1220,7 @@
       },
       "answer_relevance": {
         "score": 4,
-        "reason": "The answer correctly states that the gift must be declared to the direct manager within 07 days, but it omits that a gift of this value may be accepted and falls in the 1–5 million đồng category."
+        "reason": "The answer correctly states that the gift must be declared to the direct manager within 07 days, but it omits that the approximately 3-million-dong gift may be accepted."
       }
     },
     {
@@ -1285,9 +1285,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1630,
-      "retrieval_ms": 444,
-      "generation_ms": 1185,
+      "latency_ms": 2024,
+      "retrieval_ms": 647,
+      "generation_ms": 1376,
       "answer": "1.400.000 đồng/đêm [08_cong_tac_phi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
@@ -1299,11 +1299,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer states that an employee's hotel allowance in Đà Nẵng is capped at 1,400,000 đồng per night, exactly as specified in the context."
+        "reason": "The answer states that the maximum hotel expense for an employee in Đà Nẵng is 1,400,000 đồng per night, which is explicitly supported by the context."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer gives the correct maximum accommodation allowance of 1,400,000 đồng per night for an employee traveling to Đà Nẵng."
+        "reason": "The answer gives the correct maximum lodging allowance for an employee in Đà Nẵng: 1,400,000 đồng per night."
       }
     },
     {
@@ -1336,42 +1336,42 @@
           "chunk_id": 33,
           "filename": "08_cong_tac_phi.pdf",
           "page_no": 1,
-          "score": 0.54759,
+          "score": 0.547814,
           "rank": 1
         },
         {
           "chunk_id": 15,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 1,
-          "score": 0.488564,
+          "score": 0.48871,
           "rank": 2
         },
         {
           "chunk_id": 4,
           "filename": "01_so_tay_nhan_vien.pdf",
           "page_no": 2,
-          "score": 0.479655,
+          "score": 0.479767,
           "rank": 3
         },
         {
           "chunk_id": 30,
           "filename": "07_quy_tac_ung_xu.pdf",
           "page_no": 2,
-          "score": 0.478806,
+          "score": 0.478926,
           "rank": 4
         },
         {
           "chunk_id": 16,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 1,
-          "score": 0.473058,
+          "score": 0.47309,
           "rank": 5
         }
       ],
-      "latency_ms": 2801,
-      "retrieval_ms": 298,
-      "generation_ms": 2503,
-      "answer": "Quá 60 ngày kể từ ngày kết thúc chuyến công tác sẽ không được xử lý. [08_cong_tac_phi.pdf, p.1]",
+      "latency_ms": 1810,
+      "retrieval_ms": 675,
+      "generation_ms": 1134,
+      "answer": "Quá 60 ngày kể từ ngày kết thúc chuyến công tác thì đề nghị hoàn chi phí không được xử lý. [08_cong_tac_phi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1386,7 +1386,7 @@
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer correctly states that submissions more than 60 days after the end of the business trip will not be processed, matching the key condition in the reference."
+        "reason": "The answer correctly states that submissions over 60 days after the business trip ends will not be processed, matching the reference's main condition."
       }
     },
     {
@@ -1409,15 +1409,15 @@
       ],
       "citations": [
         {
-          "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
-          "page_no": 1,
-          "chunk_id": 16,
-          "supported": true
-        },
-        {
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 1,
           "chunk_id": 6,
+          "supported": true
+        },
+        {
+          "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
+          "page_no": 1,
+          "chunk_id": 16,
           "supported": true
         }
       ],
@@ -1458,10 +1458,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 7724,
-      "retrieval_ms": 405,
-      "generation_ms": 7318,
-      "answer": "Không. Mô hình kết hợp yêu cầu tối thiểu 02 ngày/tuần tại văn phòng, trong khi phụ cấp đi lại chỉ áp dụng cho nhân viên làm việc tại văn phòng từ 03 ngày/tuần. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1] [02_quy_che_luong_thuong_phuc_loi.pdf, p.1]",
+      "latency_ms": 2266,
+      "retrieval_ms": 219,
+      "generation_ms": 2047,
+      "answer": "Không đủ thông tin để xác định. Tài liệu chỉ quy định phụ cấp đi lại 800.000 đồng/tháng cho nhân viên làm việc tại văn phòng từ 3 ngày/tuần [02_quy_che_luong_thuong_phuc_loi.pdf, p.1], trong khi mô hình kết hợp yêu cầu có mặt tối thiểu 02 ngày/tuần [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]. Tài liệu không nêu nhân viên chỉ làm mức tối thiểu 02 ngày/tuần có được nhận phụ cấp hay không.",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1472,11 +1472,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "Every claim is directly supported: the hybrid model requires at least 02 office days per week, while the commuting allowance applies from 03 office days per week."
+        "reason": "The answer accurately distinguishes the 3-days-per-week condition for the 800,000 đồng/month travel allowance from the 2-days-per-week hybrid-work minimum and correctly notes that the documents do not state whether employees meeting only the minimum qualify."
       },
       "answer_relevance": {
-        "score": 5,
-        "reason": "Câu trả lời nêu đúng rằng nhân viên chỉ làm việc tại văn phòng 02 ngày/tuần theo mô hình kết hợp không được nhận phụ cấp, vì phụ cấp chỉ áp dụng từ 03 ngày/tuần."
+        "score": 2,
+        "reason": "The answer states the relevant thresholds correctly but incorrectly concludes that the information is insufficient instead of answering no, since the minimum two days does not meet the three-day requirement for the allowance."
       }
     },
     {
@@ -1542,10 +1542,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 6418,
-      "retrieval_ms": 439,
-      "generation_ms": 5978,
-      "answer": "Không. Nhân viên xếp loại C được đưa vào kế hoạch cải thiện hiệu suất (PIP) và đang trong thời gian PIP không đủ điều kiện xét thăng cấp trong kỳ đó. [03_khung_cap_bac_va_danh_gia.pdf, p.2]",
+      "latency_ms": 4112,
+      "retrieval_ms": 2479,
+      "generation_ms": 1632,
+      "answer": "Không. Nhân viên xếp loại C được đưa vào kế hoạch cải thiện hiệu suất (PIP) và trong thời gian PIP không đủ điều kiện xét thăng cấp trong kỳ đó. [03_khung_cap_bac_va_danh_gia.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1556,11 +1556,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer is fully supported: employees rated C are placed on a PIP, and employees in a PIP are ineligible for promotion consideration during that period."
+        "reason": "The answer is fully supported: employees rated C are placed on a PIP, and employees in a PIP are not eligible for promotion consideration during that review period."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer correctly states that an employee rated C is not eligible for promotion during that period and mentions the PIP condition."
+        "reason": "The answer correctly states that an employee rated C is placed on a PIP and is not eligible for promotion during that period, matching the reference's conclusion and relevant condition."
       }
     },
     {
@@ -1626,10 +1626,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 9238,
-      "retrieval_ms": 379,
-      "generation_ms": 8858,
-      "answer": "- **Được trả tiền:** ngày phép **chưa sử dụng của năm hiện tại** khi chấm dứt hợp đồng, theo mức lương cơ bản. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]  \n- **Không được trả tiền:** ngày phép **chuyển từ năm ngoái** nếu chưa sử dụng trước ngày 31/3; số ngày này bị hủy và không quy đổi thành tiền. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]",
+      "latency_ms": 3467,
+      "retrieval_ms": 494,
+      "generation_ms": 2972,
+      "answer": "- **Được thanh toán:** ngày phép **của năm hiện tại** chưa sử dụng khi chấm dứt hợp đồng, theo mức lương cơ bản. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]\n- **Ngày phép chuyển từ năm ngoái:** tài liệu không nêu được thanh toán khi chấm dứt hợp đồng; phép chuyển tối đa 05 ngày phải dùng trước 31/3, ngày vượt quá bị hủy và không quy đổi thành tiền. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1640,11 +1640,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "Every claim in the answer is explicitly supported by the context."
+        "reason": "All claims are directly supported by the cited policy, including payment for unused current-year leave and the lack of a stated payment provision for carried-over leave."
       },
       "answer_relevance": {
-        "score": 5,
-        "reason": "The answer correctly states that only unused leave from the current year is paid at the basic salary rate, while leave carried over from the previous year and unused by March 31 is cancelled and not paid."
+        "score": 3,
+        "reason": "Câu trả lời nêu đúng rằng phép năm hiện tại chưa dùng được thanh toán, nhưng chưa khẳng định rõ phép chuyển từ năm trước không dùng trước 31/3 sẽ bị hủy và không được thanh toán; thay vào đó chỉ nói các ngày vượt quá 5 ngày bị hủy."
       }
     },
     {
@@ -1716,10 +1716,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 4213,
-      "retrieval_ms": 348,
-      "generation_ms": 3865,
-      "answer": "Tối đa 60 ngày trong một năm dương lịch; phải được Giám đốc khối và Ban Nhân sự phê duyệt trước tối thiểu 30 ngày. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]\n\nKhông được dùng máy tính riêng để truy cập hệ thống nội bộ; phải sử dụng thiết bị do công ty cấp. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.2]",
+      "latency_ms": 2568,
+      "retrieval_ms": 432,
+      "generation_ms": 2136,
+      "answer": "Tối đa 60 ngày trong một năm dương lịch; phải được Giám đốc khối và Ban Nhân sự phê duyệt trước tối thiểu 30 ngày. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.1]\n\nKhông được dùng máy tính cá nhân để truy cập hệ thống nội bộ; phải sử dụng thiết bị do công ty cấp. [04_nghi_phep_va_lam_viec_tu_xa.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1730,11 +1730,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "Mọi thông tin trong câu trả lời đều được nêu rõ trong ngữ cảnh, bao gồm giới hạn 60 ngày, yêu cầu phê duyệt trước 30 ngày và việc không được dùng máy tính cá nhân."
+        "reason": "Every claim in the answer is explicitly supported by the context, including the 60-day annual limit, 30-day advance approval, and prohibition on using a personal computer for internal systems."
       },
       "answer_relevance": {
         "score": 5,
-        "reason": "The answer matches the reference on the 60-day annual limit, required approvals at least 30 days in advance, and the prohibition on using a personal computer for internal system access."
+        "reason": "The answer matches the reference on the 60-day annual maximum, required approvals at least 30 days in advance, and the prohibition on using personal computers to access internal systems."
       }
     },
     {
@@ -1800,9 +1800,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 4744,
-      "retrieval_ms": 390,
-      "generation_ms": 4353,
+      "latency_ms": 1562,
+      "retrieval_ms": 311,
+      "generation_ms": 1251,
       "answer": "Nghiêm trọng: có thể bị sa thải và chuyển cơ quan chức năng. [05_bao_mat_thong_tin_va_thiet_bi.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
@@ -1814,11 +1814,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer is fully supported: sharing an account is classified as a serious violation, with possible dismissal and referral to the authorities."
+        "reason": "The answer is fully supported: sharing an account is classified as a serious violation and may result in dismissal and referral to authorities."
       },
       "answer_relevance": {
         "score": 4,
-        "reason": "The answer gives the correct serious violation level and sanctions of dismissal and possible referral to authorities, but omits that account sharing is strictly prohibited and access on another’s behalf must use the system’s authorization mechanism."
+        "reason": "The answer correctly states the serious violation level and the possible consequences of dismissal and referral to authorities, but omits that account sharing is strictly prohibited and that authorized access must be used instead."
       }
     },
     {
@@ -1852,41 +1852,41 @@
           "chunk_id": 25,
           "filename": "06_tuyen_dung_va_thu_viec.pdf",
           "page_no": 2,
-          "score": 0.691132,
+          "score": 0.691086,
           "rank": 1
         },
         {
           "chunk_id": 20,
           "filename": "05_bao_mat_thong_tin_va_thiet_bi.pdf",
           "page_no": 1,
-          "score": 0.57155,
+          "score": 0.571554,
           "rank": 2
         },
         {
           "chunk_id": 24,
           "filename": "06_tuyen_dung_va_thu_viec.pdf",
           "page_no": 1,
-          "score": 0.519443,
+          "score": 0.519411,
           "rank": 3
         },
         {
           "chunk_id": 23,
           "filename": "06_tuyen_dung_va_thu_viec.pdf",
           "page_no": 1,
-          "score": 0.514432,
+          "score": 0.514346,
           "rank": 4
         },
         {
           "chunk_id": 3,
           "filename": "01_so_tay_nhan_vien.pdf",
           "page_no": 1,
-          "score": 0.483067,
+          "score": 0.48306,
           "rank": 5
         }
       ],
-      "latency_ms": 1805,
-      "retrieval_ms": 538,
-      "generation_ms": 1266,
+      "latency_ms": 1697,
+      "retrieval_ms": 415,
+      "generation_ms": 1281,
       "answer": "Hoàn thành khóa đào tạo bảo mật bắt buộc trong vòng 14 ngày; trước khi hoàn thành, chưa được cấp quyền truy cập môi trường chứa dữ liệu thật. [06_tuyen_dung_va_thu_viec.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
@@ -1898,11 +1898,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer is fully supported: new employees must complete the mandatory security training within 14 days, and access to environments containing real data is not granted before completion."
+        "reason": "The answer is fully supported by the context, which requires new employees to complete mandatory security training within 14 days and denies access to environments containing real data until completion."
       },
       "answer_relevance": {
         "score": 4,
-        "reason": "The answer correctly states the mandatory security training deadline and that access to the real-data environment is withheld until completion, but omits the reference’s conditions about anonymized data in development/testing and approval plus logging for copying real data to lower environments."
+        "reason": "The answer correctly states the mandatory security training deadline and that access to the real-data environment is withheld until completion, but omits the reference's conditions about anonymized data in development/testing and approval plus logging for copying real data."
       }
     },
     {
@@ -1968,10 +1968,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 4758,
-      "retrieval_ms": 401,
-      "generation_ms": 4357,
-      "answer": "Công ty xử lý hành vi trả đũa người tố cáo ở mức nghiêm trọng, có thể dẫn tới sa thải, độc lập với kết luận vụ việc gốc. [07_quy_tac_ung_xu.pdf, p.2] Đồng thời, danh tính người báo cáo được bảo mật trong phạm vi cho phép của quá trình điều tra. [07_quy_tac_ung_xu.pdf, p.2]",
+      "latency_ms": 1767,
+      "retrieval_ms": 234,
+      "generation_ms": 1533,
+      "answer": "Công ty xử lý hành vi trả đũa người tố cáo ở mức nghiêm trọng, có thể dẫn tới sa thải, độc lập với kết luận của vụ việc gốc. [07_quy_tac_ung_xu.pdf, p.2] Danh tính người tố cáo được bảo mật trong phạm vi cho phép của quá trình điều tra. [07_quy_tac_ung_xu.pdf, p.2]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -1982,11 +1982,11 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "Both claims are explicitly supported by the context: retaliation is treated as a serious violation potentially leading to dismissal independently of the original case, and the reporter’s identity is kept confidential to the extent permitted by the investigation."
+        "reason": "Every claim in the answer is explicitly supported by the context."
       },
       "answer_relevance": {
         "score": 4,
-        "reason": "Câu trả lời nêu đúng việc trả đũa bị xử lý nghiêm trọng, có thể dẫn tới sa thải và độc lập với kết luận vụ việc gốc, nhưng thiếu các biện pháp tạm thời như tách quan hệ báo cáo hoặc đình chỉ có hưởng lương."
+        "reason": "Câu trả lời nêu đúng việc trả đũa người tố cáo bị xử lý nghiêm trọng, có thể dẫn tới sa thải và độc lập với kết luận vụ việc gốc, nhưng thiếu các biện pháp tạm thời như tách quan hệ báo cáo hoặc đình chỉ có hưởng lương."
       }
     },
     {
@@ -2052,10 +2052,10 @@
           "rank": 5
         }
       ],
-      "latency_ms": 3915,
-      "retrieval_ms": 537,
-      "generation_ms": 3378,
-      "answer": "Kỹ sư L3 **không thuộc diện được đặt hạng phổ thông đặc biệt**; tài liệu không quy định rõ hạng ghế thay thế. [08_cong_tac_phi.pdf, p.1]\n\nMức phòng tối đa khi công tác tại **châu Âu là 220 USD/đêm**. [08_cong_tac_phi.pdf, p.1]",
+      "latency_ms": 2088,
+      "retrieval_ms": 759,
+      "generation_ms": 1328,
+      "answer": "Hạng phổ thông đặc biệt; tối đa 220 USD tiền phòng mỗi đêm. [08_cong_tac_phi.pdf, p.1]",
       "outcome": "answered",
       "retrieval": {
         "recall@5": 1.0,
@@ -2065,12 +2065,12 @@
         "relevant_count": 2
       },
       "faithfulness": {
-        "score": 5,
-        "reason": "Every claim is supported by the context: L3 is not listed among those eligible for premium economy on flights over 8 hours, the substitute class is unspecified, and the Europe hotel limit is 220 USD per night."
+        "score": 2,
+        "reason": "The claim that an L3 engineer may fly premium economy is contradicted by the context, which grants that class only to L4 or department heads and above, while the USD 220 hotel limit is supported."
       },
       "answer_relevance": {
-        "score": 3,
-        "reason": "Đáp án nêu đúng mức phòng tối đa 220 USD/đêm và đúng điều kiện L3 không được hạng phổ thông đặc biệt, nhưng không xác định hạng ghế là phổ thông như đáp án tham chiếu."
+        "score": 2,
+        "reason": "Câu trả lời đúng mức tiền phòng 220 USD/đêm nhưng sai hạng ghế, vì kỹ sư L3 chỉ được ngồi hạng phổ thông chứ không phải phổ thông đặc biệt."
       }
     },
     {
@@ -2080,7 +2080,7 @@
       "q": "Nhân viên nghỉ thai sản 06 tháng thì thưởng cuối năm được tính theo tỷ lệ nào?",
       "relevant_chunk_ids": [],
       "question": "Nhân viên nghỉ thai sản 06 tháng thì thưởng cuối năm được tính theo tỷ lệ nào?",
-      "refused": false,
+      "refused": true,
       "chunk_ids": [
         15,
         6,
@@ -2088,62 +2088,49 @@
         17,
         4
       ],
-      "citations": [
-        {
-          "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
-          "page_no": 1,
-          "chunk_id": 6,
-          "supported": true
-        },
-        {
-          "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
-          "page_no": 2,
-          "chunk_id": 8,
-          "supported": true
-        }
-      ],
+      "citations": [],
       "retrieved": [
         {
           "chunk_id": 15,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 1,
-          "score": 0.6435,
+          "score": 0.643446,
           "rank": 1
         },
         {
           "chunk_id": 6,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 1,
-          "score": 0.622305,
+          "score": 0.6223,
           "rank": 2
         },
         {
           "chunk_id": 8,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 2,
-          "score": 0.601726,
+          "score": 0.601643,
           "rank": 3
         },
         {
           "chunk_id": 17,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 2,
-          "score": 0.577554,
+          "score": 0.577502,
           "rank": 4
         },
         {
           "chunk_id": 4,
           "filename": "01_so_tay_nhan_vien.pdf",
           "page_no": 2,
-          "score": 0.565718,
+          "score": 0.565699,
           "rank": 5
         }
       ],
-      "latency_ms": 7205,
-      "retrieval_ms": 250,
-      "generation_ms": 6955,
-      "answer": "Mức thưởng cuối năm mục tiêu là 02 tháng lương cơ bản, điều chỉnh theo kết quả kinh doanh và xếp loại hiệu suất cá nhân [02_quy_che_luong_thuong_phuc_loi.pdf, p.1]. Tài liệu chỉ quy định tính theo tỷ lệ tháng làm việc thực tế đối với nhân viên vào làm trong năm, không nêu tỷ lệ áp dụng cho nhân viên nghỉ thai sản 06 tháng [02_quy_che_luong_thuong_phuc_loi.pdf, p.2].",
-      "outcome": "hallucinated",
+      "latency_ms": 2550,
+      "retrieval_ms": 728,
+      "generation_ms": 1822,
+      "answer": "Không tìm thấy thông tin trong tài liệu.",
+      "outcome": "correct_refusal",
       "retrieval": {
         "recall@5": null,
         "mrr": null,
@@ -2153,7 +2140,7 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The answer accurately states the year-end bonus target and explains that the documents provide a pro-rata rule only for employees who joined during the year, without specifying a ratio for six months of maternity leave."
+        "reason": "The answer correctly states that the documents do not specify the year-end bonus calculation rate for an employee taking six months of maternity leave."
       },
       "answer_relevance": null
     },
@@ -2178,41 +2165,41 @@
           "chunk_id": 31,
           "filename": "08_cong_tac_phi.pdf",
           "page_no": 1,
-          "score": 0.602191,
+          "score": 0.602213,
           "rank": 1
         },
         {
           "chunk_id": 32,
           "filename": "08_cong_tac_phi.pdf",
           "page_no": 1,
-          "score": 0.58375,
+          "score": 0.583775,
           "rank": 2
         },
         {
           "chunk_id": 3,
           "filename": "01_so_tay_nhan_vien.pdf",
           "page_no": 1,
-          "score": 0.504758,
+          "score": 0.50487,
           "rank": 3
         },
         {
           "chunk_id": 16,
           "filename": "04_nghi_phep_va_lam_viec_tu_xa.pdf",
           "page_no": 1,
-          "score": 0.495644,
+          "score": 0.495639,
           "rank": 4
         },
         {
           "chunk_id": 8,
           "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
           "page_no": 2,
-          "score": 0.489881,
+          "score": 0.489987,
           "rank": 5
         }
       ],
-      "latency_ms": 1143,
-      "retrieval_ms": 359,
-      "generation_ms": 783,
+      "latency_ms": 1670,
+      "retrieval_ms": 643,
+      "generation_ms": 1026,
       "answer": "Không tìm thấy thông tin trong tài liệu.",
       "outcome": "correct_refusal",
       "retrieval": {
@@ -2235,7 +2222,7 @@
       "q": "Mua bảo hiểm sức khỏe cho bố mẹ theo diện người thân thì đóng bao nhiêu tiền một năm?",
       "relevant_chunk_ids": [],
       "question": "Mua bảo hiểm sức khỏe cho bố mẹ theo diện người thân thì đóng bao nhiêu tiền một năm?",
-      "refused": false,
+      "refused": true,
       "chunk_ids": [
         9,
         8,
@@ -2243,14 +2230,7 @@
         33,
         15
       ],
-      "citations": [
-        {
-          "filename": "02_quy_che_luong_thuong_phuc_loi.pdf",
-          "page_no": 2,
-          "chunk_id": 9,
-          "supported": true
-        }
-      ],
+      "citations": [],
       "retrieved": [
         {
           "chunk_id": 9,
@@ -2288,11 +2268,11 @@
           "rank": 5
         }
       ],
-      "latency_ms": 5035,
-      "retrieval_ms": 353,
-      "generation_ms": 4681,
-      "answer": "Bố mẹ thuộc diện người thân: tự nguyện, tự đóng phí; tài liệu không nêu mức phí một năm. [02_quy_che_luong_thuong_phuc_loi.pdf, p.2]",
-      "outcome": "hallucinated",
+      "latency_ms": 2099,
+      "retrieval_ms": 474,
+      "generation_ms": 1625,
+      "answer": "Không tìm thấy thông tin trong tài liệu.",
+      "outcome": "correct_refusal",
       "retrieval": {
         "recall@5": null,
         "mrr": null,
@@ -2302,7 +2282,7 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "Every claim is supported by the cited context, which states that dependents are voluntary and self-paid and does not specify an annual premium."
+        "reason": "The answer correctly states that the annual premium for parents under the dependent health insurance option is not provided in the documents."
       },
       "answer_relevance": null
     },
@@ -2359,9 +2339,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 2017,
-      "retrieval_ms": 440,
-      "generation_ms": 1577,
+      "latency_ms": 1355,
+      "retrieval_ms": 542,
+      "generation_ms": 813,
       "answer": "Không tìm thấy thông tin trong tài liệu.",
       "outcome": "correct_refusal",
       "retrieval": {
@@ -2373,7 +2353,7 @@
       },
       "faithfulness": {
         "score": 5,
-        "reason": "The document does not specify leave days for caring for seriously ill parents, so stating that the information cannot be found is fully supported."
+        "reason": "The documents do not specify leave days for caring for seriously ill parents, so stating that the information cannot be found is fully supported."
       },
       "answer_relevance": null
     },
@@ -2430,9 +2410,9 @@
           "rank": 5
         }
       ],
-      "latency_ms": 1641,
-      "retrieval_ms": 522,
-      "generation_ms": 1119,
+      "latency_ms": 2597,
+      "retrieval_ms": 1264,
+      "generation_ms": 1332,
       "answer": "Không tìm thấy thông tin trong tài liệu.",
       "outcome": "correct_refusal",
       "retrieval": {
