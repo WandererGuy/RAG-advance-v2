@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ForeignKey, Index, Integer, Text
+from sqlalchemy import ForeignKey, Index, Integer, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -47,6 +47,15 @@ class Chunk(Base, TimestampMixin):
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
         Index("ix_chunks_document_id_chunk_index", "document_id", "chunk_index", unique=True),
+        # Keyword retrieval (Phase 6). The expression must stay identical to the one in
+        # `DocumentRepository.search_keyword` and in migration 002 — an expression index is
+        # only used for the exact expression it was built on, and a mismatch degrades to a
+        # sequential scan silently. `simple` because Postgres has no Vietnamese configuration.
+        Index(
+            "ix_chunks_content_tsv_gin",
+            text("to_tsvector('simple', content)"),
+            postgresql_using="gin",
+        ),
     )
 
     def __repr__(self) -> str:

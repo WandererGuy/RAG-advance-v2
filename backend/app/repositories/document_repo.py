@@ -16,6 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Chunk, Document, DocumentStatus
 
+# The text-search configuration for keyword retrieval. `simple` case-folds and splits on
+# non-word characters without stemming or stopword removal; Postgres ships no Vietnamese
+# configuration, and `english` would stem Vietnamese as English (see migration 002).
+#
+# This value is baked into `ix_chunks_content_tsv_gin`. Changing it here without a matching
+# migration silently drops the index and turns every keyword search into a sequential scan.
+TSVECTOR_CONFIG = "simple"
+
 
 @dataclass(frozen=True)
 class ChunkHit:
@@ -257,6 +265,56 @@ class DocumentRepository:
                 page_no=row.page_no,
                 chunk_index=row.chunk_index,
                 content=row.content,
+            )
+            for row in result.all()
+        ]
+
+    async def search_keyword(self, tsquery: str, top_k: int) -> list[ChunkHit]:
+        """Full-text top-k over `to_tsvector('simple', content)`, ranked by `ts_rank_cd`.
+
+        `tsquery` is already-composed tsquery syntax, built by the caller (`bm25.py`) — this
+        layer does not parse a natural-language question, it runs the query it is given. The
+        terms are passed as a bind parameter, never interpolated: `to_tsquery` on unescaped
+        user text is both an injection surface and a syntax error waiting for the first
+        question containing an apostrophe.
+
+        The `to_tsvector('simple', content)` expression must match `ix_chunks_content_tsv_gin`
+        character for character or the index is not used. It is defined once in
+        `bm25.TSVECTOR_EXPR` and rendered from there.
+
+        `score` is `ts_rank_cd`, which is **not** a cosine similarity and shares no scale with
+        `search_similar`. Both arrive as `ChunkHit.score`, so nothing may compare the two
+        directly — which is exactly why the hybrid retriever fuses by *rank* (RRF) rather than
+        by score.
+        """
+        tsv = func.to_tsvector(TSVECTOR_CONFIG, Chunk.content)
+        query = func.to_tsquery(TSVECTOR_CONFIG, tsquery)
+        rank = func.ts_rank_cd(tsv, query)
+
+        result = await self._session.execute(
+            select(
+                Chunk.id,
+                Chunk.document_id,
+                Document.filename,
+                Chunk.page_no,
+                Chunk.chunk_index,
+                Chunk.content,
+                rank.label("rank"),
+            )
+            .join(Document, Document.id == Chunk.document_id)
+            .where(tsv.op("@@")(query))
+            .order_by(rank.desc(), Chunk.id)
+            .limit(top_k)
+        )
+        return [
+            ChunkHit(
+                chunk_id=row.id,
+                document_id=row.document_id,
+                filename=row.filename,
+                page_no=row.page_no,
+                chunk_index=row.chunk_index,
+                content=row.content,
+                score=float(row.rank),
             )
             for row in result.all()
         ]

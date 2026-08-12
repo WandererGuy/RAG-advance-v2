@@ -101,9 +101,16 @@ class TestRegistry:
         assert "naive-v1" in registry.available()
         assert registry.get_pipeline("naive-v1").name == "naive-v1"
 
+    def test_hybrid_v2_is_registered_by_importing_the_package(self) -> None:
+        # The one line a new pipeline adds outside its own file is the import in
+        # `pipelines/__init__.py`. Forgetting it makes `--pipeline hybrid-v2` fail with "not
+        # registered" for a file that plainly exists, which is a confusing way to lose an hour.
+        assert "hybrid-v2" in registry.available()
+        assert registry.get_pipeline("hybrid-v2").name == "hybrid-v2"
+
     def test_unknown_name_lists_what_exists(self) -> None:
         with pytest.raises(PipelineNotFound) as exc:
-            registry.get_pipeline("hybrid-v2")
+            registry.get_pipeline("no-such-pipeline-v9")
         assert "naive-v1" in str(exc.value)
 
     def test_a_name_cannot_be_rebound(self) -> None:
