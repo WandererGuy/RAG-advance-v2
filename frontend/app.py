@@ -23,6 +23,9 @@ API_BASE = os.environ.get("API_BASE_URL", "http://localhost:8000/api/v1")
 CHAT_TIMEOUT = 120
 UPLOAD_TIMEOUT = 600
 
+# Tạm ẩn ô upload trong sidebar. Đặt lại True để khôi phục — API `POST /documents` không đổi.
+SHOW_UPLOAD = False
+
 st.set_page_config(page_title="RAG chatbot — hỏi đáp tài liệu nội bộ", page_icon="📄")
 
 # Câu hỏi gợi ý, nhóm theo tài liệu nguồn.
@@ -132,34 +135,35 @@ def detail_of(exc: requests.HTTPError) -> str:
 with st.sidebar:
     st.header("Tài liệu")
 
-    upload = st.file_uploader("Tải lên PDF hoặc DOCX", type=["pdf", "docx"])
-    if upload is not None and st.button("Nạp tài liệu", use_container_width=True):
-        with st.spinner("Đang nạp — trích xuất, chia chunk và embed, có thể mất một lúc…"):
-            try:
-                response = requests.post(
-                    f"{API_BASE}/documents",
-                    files={"file": (upload.name, upload.getvalue())},
-                    timeout=UPLOAD_TIMEOUT,
-                )
-                response.raise_for_status()
-                result = response.json()
-            except requests.HTTPError as exc:
-                st.error(detail_of(exc))
-            except requests.RequestException as exc:
-                st.error(f"Không gọi được API: {exc}")
-            else:
-                if result["status"] == "skipped":
-                    st.info(
-                        f"`{result['filename']}` đã có trong hệ thống "
-                        f"({result['chunk_count']} chunk) — nội dung không đổi."
+    if SHOW_UPLOAD:
+        upload = st.file_uploader("Tải lên PDF hoặc DOCX", type=["pdf", "docx"])
+        if upload is not None and st.button("Nạp tài liệu", use_container_width=True):
+            with st.spinner("Đang nạp — trích xuất, chia chunk và embed, có thể mất một lúc…"):
+                try:
+                    response = requests.post(
+                        f"{API_BASE}/documents",
+                        files={"file": (upload.name, upload.getvalue())},
+                        timeout=UPLOAD_TIMEOUT,
                     )
+                    response.raise_for_status()
+                    result = response.json()
+                except requests.HTTPError as exc:
+                    st.error(detail_of(exc))
+                except requests.RequestException as exc:
+                    st.error(f"Không gọi được API: {exc}")
                 else:
-                    st.success(
-                        f"Đã nạp `{result['filename']}`: {result['chunk_count']} chunk"
-                        + (f", {result['page_count']} trang" if result["page_count"] else "")
-                    )
+                    if result["status"] == "skipped":
+                        st.info(
+                            f"`{result['filename']}` đã có trong hệ thống "
+                            f"({result['chunk_count']} chunk) — nội dung không đổi."
+                        )
+                    else:
+                        st.success(
+                            f"Đã nạp `{result['filename']}`: {result['chunk_count']} chunk"
+                            + (f", {result['page_count']} trang" if result["page_count"] else "")
+                        )
 
-    st.divider()
+        st.divider()
     try:
         documents = api_get("/documents")
     except requests.RequestException as exc:
