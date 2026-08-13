@@ -48,6 +48,20 @@ free_port() {
   sleep 1
 }
 
+# On EC2 the 127.0.0.1 URLs are useless from your own browser — they resolve to
+# *your* machine. Ask IMDSv2 for the instance's public IPv4; empty (and silent) on
+# anything that is not EC2, or on an instance without a public address.
+detect_public_host() {
+  local token ip
+  token="$(curl -s -m 2 -X PUT http://169.254.169.254/latest/api/token \
+    -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' 2>/dev/null || true)"
+  [[ -z "$token" ]] && return 0
+  ip="$(curl -s -m 2 -H "X-aws-ec2-metadata-token: $token" \
+    http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || true)"
+  # A 404 body ("<?xml ...Not Found") is not an address; only echo a real dotted quad.
+  [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && echo "$ip"
+}
+
 if [[ "${1:-}" == "--stop" ]]; then
   stop
   exit 0
@@ -100,7 +114,11 @@ fi
 echo "==> ui (port $UI_PORT)"
 # --server.port is passed through the Makefile's streamlit invocation; without it
 # streamlit silently picks the next free port and the URL printed below is wrong.
+# Bind explicitly: streamlit's default is already all-interfaces, but a stray
+# ~/.streamlit/config.toml on the box could pin it to localhost and quietly break
+# the public URL printed at the end.
 setsid env STREAMLIT_SERVER_PORT="$UI_PORT" STREAMLIT_SERVER_HEADLESS=true \
+  STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
   make ui >"$RUN_DIR/ui.log" 2>&1 &
 echo $! >"$RUN_DIR/ui.pid"
 
@@ -120,15 +138,15 @@ cat <<EOF
   UI    http://127.0.0.1:$UI_PORT
 EOF
 
-# On a remote box those 127.0.0.1 URLs are useless from your own browser — they
-# resolve to *your* machine. PUBLIC_HOST is not auto-detected: IMDS is blocked here,
-# and a guessed hostname printed as a working URL is worse than none.
-if [[ -n "${PUBLIC_HOST:-}" ]]; then
+# PUBLIC_HOST set by hand wins; otherwise ask EC2 for the instance's public IPv4.
+PUBLIC_HOST="${PUBLIC_HOST:-$(detect_public_host)}"
+if [[ -n "$PUBLIC_HOST" ]]; then
   cat <<EOF
 
   from your own browser:
   UI    http://$PUBLIC_HOST:$UI_PORT
-  (the API stays on localhost — reach it through the UI, or use an SSH tunnel)
+  (needs port $UI_PORT open in the security group; the API stays on localhost —
+   reach it through the UI, or use an SSH tunnel)
 EOF
 fi
 
