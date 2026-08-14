@@ -1,8 +1,9 @@
 # Kiểm kê kỹ thuật — rag-chatbot
 
 Danh sách đầy đủ mọi kỹ thuật: đã làm · đã có kế hoạch · dự định thêm.
-Trạng thái tính đến 2026-08-12, commit `14880f9`, Phase 0–3 xong, Phase 4 code xong nhưng
-chưa có baseline commit.
+Trạng thái tính đến 2026-08-14, commit `a7727e5`, **Phase 0–6 xong**. Ba pipeline đã có kết quả
+commit trong `results/` (`naive-v1`, `hybrid-v2`, `rerank-v1`), `rerank-v1` là pipeline **đang
+được serve** (ADR-0010).
 
 Chú thích trạng thái:
 
@@ -27,7 +28,7 @@ Chú thích trạng thái:
 | 1.6 | Transactional ingest + per-file isolation | ✅ | hash → chunk → embed → insert trong 1 transaction; fail giữa chừng thì rollback + `status=failed` + `error_message`, vẫn chạy tiếp file sau |
 | 1.7 | pgvector HNSW index | ✅ | `vector_cosine_ops`, `CREATE EXTENSION` trong migration |
 | 1.8 | Corpus freezing / lockfile | ✅ | `corpus.lock.json` + `make validate` — chống chunk-id drift phá golden set (ADR-0005) |
-| 1.9 | MRL truncation 3072 → 768 dim | ⚠️ | **KHÔNG phải "dùng Matryoshka"** — xem mục 7.1. Đây chỉ là một con số cố định trong config |
+| 1.9 | Truncation 3072 → 768 dim | ⚠️ | `text-embedding-3-large` truncate native xuống 768. **KHÔNG phải "dùng Matryoshka"** — xem mục 7.1. Đây chỉ là một con số cố định trong config |
 | 1.10 | Breadcrumb / structural metadata | 💡 | `Sổ tay NV > Chương 3 > 3.2 Phụ cấp > Bảng 3.1` prepend vào chunk trước khi embed |
 | 1.11 | Semantic / late chunking | 💡 | Thay `chunk-500-v1` bằng biến thể có ý nghĩa hơn ablation thuần size |
 | 1.12 | Contextual Retrieval (Anthropic) | 💡 | LLM sinh 1–2 câu ngữ cảnh cho mỗi chunk trước khi embed — cùng họ breadcrumb nhưng mạnh hơn |
@@ -44,13 +45,13 @@ Chú thích trạng thái:
 | 2.2 | Retriever là Protocol, DI qua constructor | ✅ | `retrievers/base.py` — pipeline nhận retriever, không tự khởi tạo |
 | 2.3 | VectorStore abstraction | ✅ | `add_chunks` / `search` / `delete_by_document` (ADR-0003) |
 | 2.4 | Tách `RetrievedChunk` khỏi `ChunkHit` | ✅ | `ChunkHit.score` = cosine cụ thể; retriever score = "bất kỳ thứ gì nó rank theo". RRF score Phase 6 không được đọc nhầm thành cosine |
-| 2.5 | BM25 sparse retrieval | 📋 | `retrievers/bm25.py`, Postgres `tsvector` |
-| 2.6 | Hybrid search + RRF fusion | 📋 | `retrievers/hybrid.py` → pipeline `hybrid-v2`. PLAN gọi đây là cải thiện **lớn nhất** cho tài liệu doanh nghiệp: nhiều jargon nội bộ và mã tham chiếu mà embedding bắt kém |
-| 2.7 | Cross-encoder reranking | 📋 | `retrievers/reranker.py`, top-20 → top-5 |
+| 2.5 | BM25 sparse retrieval | ✅ | `retrievers/bm25.py`, Postgres `tsvector` + `ts_rank_cd` |
+| 2.6 | Hybrid search + RRF fusion | ⚠️ | `retrievers/hybrid.py` → pipeline `hybrid-v2`. **Đã làm, đã đo, KHÔNG được adopt** (ADR-0009): recall@5 0.938 < 0.958 của baseline. PLAN đoán đây là cải thiện lớn nhất — số liệu bác lại. Fuse bằng **rank** (RRF K=60), không phải weighted sum, vì score hai retriever khác thang |
+| 2.7 | Cross-encoder reranking | ✅ | `retrievers/reranker.py`, dense top-20 → rerank → top-5, `voyage/rerank-2.5-lite`. Pipeline `rerank-v1`, **thắng baseline trên mọi metric retrieval và đang được serve** (ADR-0010) |
 | 2.8 | Query rewriting | 📋 | pipeline `qrewrite-v1` |
 | 2.9 | Multi-query retrieval / query expansion | 💡 | Sinh 3–5 biến thể → retrieve song song → RRF hợp nhất. Rất hợp tiếng Việt (nhiều cách diễn đạt cùng khái niệm HR). Dùng lại đúng code RRF của 2.6. Chi phí: +1 LLM call/query |
 | 2.10 | Small-to-big / parent-document retrieval | 💡 | Embed chunk nhỏ để match chính xác, trả chunk cha để LLM đủ ngữ cảnh. **Trực tiếp giúp 8 câu `multi_hop`** trong golden set |
-| 2.11 | Matryoshka coarse-to-fine two-stage | 💡 | Index song song 768 + 3072 → coarse top-50 ở dim thấp → rerank dim cao → top-5. Xem 7.1 |
+| 2.11 | Coarse-to-fine two-stage theo dimension | 💡 | Index song song 768 + 3072 → coarse top-50 ở dim thấp → rerank dim cao → top-5. Xem 7.1. **Lưu ý:** 2.7 đã chiếm chỗ "second stage" bằng cross-encoder và đã thắng; mục này chỉ có nghĩa ở quy mô lớn hơn nhiều, như một cách *rẻ hơn* chứ không *tốt hơn* |
 
 ---
 
@@ -66,8 +67,8 @@ Cụm mạnh nhất của repo.
 | 3.4 | **Citation verification loop** | ✅ | Parse citation **ngược ra khỏi câu trả lời**, resolve lại với đúng chunk đã đưa cho model. Không match → giữ với `supported=false` và **đếm nó**. Xoá đi là che giấu lỗi người đọc dễ tin nhất |
 | 3.5 | Prompt versioning | ✅ | Đổi prompt = file mới (`answer_v1.jinja`), không sửa tại chỗ |
 | 3.6 | Jinja2 `StrictUndefined` | ✅ | Biến typo **nổ** thay vì render chuỗi rỗng. Prompt thiếu context tạo ra output trông ổn và số vô nghĩa |
-| 3.7 | `temperature=0` + timeout tường minh | ✅ | Trên mọi call |
-| 3.8 | Provider-agnostic qua LiteLLM | ✅ | Đổi provider không đụng pipeline |
+| 3.7 | Timeout tường minh trên mọi call | ⚠️ | **`temperature=0` không còn đúng.** `gpt-5.6-luna` từ chối `temperature=0` → `LLM_SUPPORTS_TEMPERATURE=false`, results file ghi `temperature: null`. Hệ quả: **metric generation không tái lập được** — cùng code cùng corpus, `hybrid-v2` cho `refusal_accuracy` 0.8 rồi 1.0. Metric retrieval vẫn deterministic (CLAUDE.md luật 16) |
+| 3.8 | Provider-agnostic qua LiteLLM | ✅ | Đổi provider không đụng pipeline — **đã dùng thật hai lần**: Gemini → OpenAI (ADR-0008), và thêm Voyage cho rerank (ADR-0010). Stack hiện có **3 vendor** và 2 key có tính phí nằm trên đường `/chat`; `RERANK_PROVIDER` đổi được sang Cohere/Jina và 4 provider khác |
 | 3.9 | Prompt caching | 💡 | Xem mục 6.1 |
 
 ---
@@ -117,7 +118,7 @@ Cụm mạnh nhất của repo.
 | 4.27 | Full provenance trong mọi results file | ✅ | `config`, `dataset_version`, `golden_set_author`, `judge_model`, `judge_is_answer_model`, `git_sha`, `git_dirty`, `corpus_validated`, `partial_run`, `schema_version` |
 | 4.28 | Không commit kết quả một phần | ✅ | Dừng ở câu 10/29 vì quota — "một file kết quả thực chất là mẫu 3 câu còn tệ hơn không có baseline, vì nó sẽ bị đọc như baseline" |
 | 4.29 | Chunk-size ablation | 📋 | `chunk-500-v1`, `chunk-1200-v1` — cần re-ingest → phải ghi rõ corpus version |
-| 4.30 | CI/CD cho eval | 📋 | `.github/workflows/eval.yml` — chạy eval trên PR, comment diff so baseline. Chỉ làm khi đã có ≥3 pipeline |
+| 4.30 | CI/CD cho eval | 📋 | `.github/workflows/eval.yml` — chạy eval trên PR, comment diff so baseline. Điều kiện "≥3 pipeline" **đã đạt**. Cạm bẫy khi làm: chỉ gate được trên metric **retrieval** (deterministic); gate trên metric generation sẽ fail ngẫu nhiên (3.7) |
 
 ---
 
@@ -129,14 +130,14 @@ Cụm mạnh nhất của repo.
 | 5.2 | Layering nghiêm | ✅ | `routes → services → repositories → models`; service không import `fastapi`, chỉ repo viết SQL |
 | 5.3 | Protocol-based design | ✅ | `Retriever`, `VectorStore`, `Embedder`, `RAGPipeline` |
 | 5.4 | Tách `schemas/` (Pydantic) khỏi `models/` (ORM) | ✅ | Không bao giờ trả ORM object từ route |
-| 5.5 | Type safety | ✅ | `mypy` + `ruff` clean trên 47 file |
-| 5.6 | Test 131 case, tách unit / integration | ✅ | `unit/` không chạm DB/network; `integration/` dùng Postgres thật qua docker compose |
+| 5.5 | Type safety | ✅ | `mypy` + `ruff` clean trên 65 file |
+| 5.6 | Test 212 case, tách unit / integration | ✅ | `unit/` không chạm DB/network; `integration/` dùng Postgres thật qua docker compose |
 | 5.7 | Alembic migration | ✅ | |
 | 5.8 | Structured logging | ✅ | structlog JSON — `core/logging.py`, không `print()` ngoài `scripts/` |
 | 5.9 | Centralized config | ✅ | `core/config.py`, không `os.getenv()` rải rác |
 | 5.10 | Domain exceptions | ✅ | `core/exceptions.py`, không `except: pass` |
 | 5.11 | Pinned model, **cấm alias** | ✅ | Alias đổi ngầm dưới pipeline đóng băng → results file ghi tên một cấu hình không còn định danh cái đã chạy (ADR-0007) |
-| 5.12 | 7 ADR — Context / Decision / Consequences | ✅ | Kèm trigger cụ thể để xem xét lại từng quyết định |
+| 5.12 | 10 ADR — Context / Decision / Consequences | ✅ | Kèm trigger cụ thể để xem xét lại từng quyết định. Trong đó **ADR-0009 là ADR cho một thí nghiệm thất bại** — thứ ít người viết nhất |
 | 5.13 | Progress log per-phase + mục "blocked on a human" | ✅ | `docs/progress/phase-N.md` |
 
 ---
@@ -189,7 +190,7 @@ Cụm mạnh nhất của repo.
 
 ### 7.1 Matryoshka — cách nói không bị bắt bài
 
-**Thực trạng:** `gemini-embedding-001` là MRL model, gốc 3072 dim, đang truncate xuống 768.
+**Thực trạng:** `text-embedding-3-large` gốc 3072 dim, hỗ trợ truncate native, đang dùng 768.
 Nhưng dùng như **con số cố định trong config**, không phải như kỹ thuật. Không adaptive
 dimension, không coarse-to-fine two-stage, không shortlist dim thấp rồi rerank dim cao.
 
@@ -197,12 +198,16 @@ dimension, không coarse-to-fine two-stage, không shortlist dim thấp rồi re
 
 ✅ Nói thế này:
 
-> `gemini-embedding-001` là MRL model, gốc 3072 dim. Em truncate xuống 768 — đủ cho corpus
-> quy mô này, giảm 4 lần dung lượng index và chi phí distance. Em **chưa khai thác MRL đúng
-> nghĩa**, tức là coarse-to-fine two-stage search, vì với 34 chunk thì shortlist ở dim thấp
+> `text-embedding-3-large` gốc 3072 dim và truncate được ngay ở API. Em lấy 768 — đủ cho corpus
+> quy mô này, giảm 4 lần dung lượng index và chi phí distance. Em **chưa khai thác đúng nghĩa**
+> ý tưởng coarse-to-fine two-stage search, vì với 34 chunk thì shortlist ở dim thấp
 > không tiết kiệm được gì đo được. Ở quy mô hàng trăm nghìn vector thì đó là thứ em sẽ làm
 > trước tiên — và vì con số 768 nằm ở **ba nơi phải đổi đồng thời** (`.env`, `EMBEDDING_DIM`,
-> migration), đổi nó là một migration cộng full re-ingest cộng chạy lại mọi pipeline.
+> migration), đổi nó là một migration cộng full re-embed cộng chạy lại mọi pipeline.
+
+**Lưu ý thêm:** đổi *model* embedding — kể cả giữ nguyên 768 dim — cũng vô hiệu hoá mọi vector
+đã lưu, vì embedding chỉ so sánh được với embedding cùng model. Dùng `make reembed` (UPDATE tại
+chỗ), **không bao giờ `make ingest FORCE=1`** — cái đó đánh lại chunk id và phá golden set.
 
 Câu sau cho thấy hiểu kỹ thuật **và** hiểu chi phí đổi nó. 
 
@@ -210,36 +215,53 @@ Câu sau cho thấy hiểu kỹ thuật **và** hiểu chi phí đổi nó.
 
 | Vấn đề | Cách nói |
 |---|---|
-| **Chưa có `results/naive-v1.json`** | Nghiêm trọng nhất. Toàn bộ câu chuyện "evaluation-first" mà không có con số nào → mất sức thuyết phục |
-| `recall@5 = 1.0` | Corpus 34 chunk, `top_k=5` nhìn thấy ~15% corpus → con số vô nghĩa. Đã tự ghi trong phase-4: đó là bằng chứng **plumbing chạy**, không phải bằng chứng retrieval tốt |
-| Golden set do agent viết | ADR-0004 + bảng lạm phát |
+| **`rerank-v1` đạt `recall@5 = 1.0`** | Nghiêm trọng nhất bây giờ. Corpus 34 chunk, `top_k=5` nhìn thấy ~15% corpus → 1.0 **không phải bằng chứng retrieval tốt**, chỉ là bằng chứng bài toán này dễ ở quy mô này. Nói con số kèm mẫu số, đừng nói con số trần |
+| MRR 0.840 → 0.979 | Đây mới là phần đáng kể: recall gần trần từ đầu nên chỗ còn cải thiện được là **thứ tự**, và reranker đánh trúng đúng chỗ đó. 6 câu tăng hạng, 0 câu tụt (ADR-0010) |
+| Golden set do agent viết | ADR-0004 + bảng lạm phát. Vẫn là điểm yếu lớn nhất, chưa sửa được |
 | Judge tự chấm | ADR-0006; và 4.21 là cách rẻ nhất để sửa |
-| Chỉ 1 pipeline | Chưa chứng minh được vòng lặp cải tiến |
-| Chưa có API chat / UI | Phase 5 — không demo được |
+| **`refusal` của `rerank-v1` là 0.800, thấp hơn baseline 1.000** | Đừng giấu. Nhưng cũng đừng kết luận từ nó: generation metric không tái lập được (3.7), và khoảng cách 0.2 nằm đúng trong biên độ đã quan sát được giữa hai lần chạy cùng một pipeline. Cần chạy lại nhiều lần mới nói được |
+| 3 pipeline nhưng chỉ 1 thắng | Đúng, và **`hybrid-v2` thua vẫn được commit kèm ADR-0009**. Đó là điểm mạnh chứ không phải điểm yếu: giữ được kết quả âm nghĩa là vòng lặp đo thật |
 
 ### 7.3 Sự cố thật đã xử lý — kể được
 
 | Sự cố | Xử lý |
 |---|---|
 | Provider khai tử `gemini-2.5-flash` giữa Phase 4 → 404 toàn bộ | Đổi sang `gemini-3.6-flash` pinned + luật cấm alias (ADR-0007). Ghi chú sắc: *"model vẫn xuất hiện trong `models` list và chỉ 404 khi gọi thật — 'cấu hình đúng' và 'còn chạy được' là hai câu hỏi khác nhau"* |
-| Chunk id đánh lại khi `--force` re-ingest → phá golden set | `corpus.lock.json` + `make validate` fail to tiếng (ADR-0005) |
-| Quota free tier 20 req/ngày/model vs ~82 req cần cho 1 run | Dừng ở câu 10/29, **không commit kết quả một phần** |
+| Quota free tier 20 req/ngày/model vs ~82 req cần cho 1 run | Dừng ở câu 10/29, **không commit kết quả một phần**. Sau đó chuyển hẳn stack sang OpenAI (ADR-0008) — đây mới là cách sửa gốc |
+| Đổi model embedding sang `text-embedding-3-large` | Mọi vector đã lưu thành vô nghĩa vì embedding chỉ so được cùng model. Sửa bằng `make reembed` (UPDATE tại chỗ), **không** re-ingest — re-ingest đánh lại chunk id (ADR-0008) |
+| Chunk id đánh lại khi `--force` re-ingest → phá golden set | `corpus.lock.json` + `make validate` fail to tiếng (ADR-0005). Bẫy này **cố ý không expose qua HTTP**: `POST /documents` không có tham số `force` |
+| `gpt-5.6-luna` từ chối `temperature=0` | `LLM_SUPPORTS_TEMPERATURE=false`, results file ghi `temperature: null`. Hệ quả kể được: phát hiện generation metric dao động 0.8↔1.0 giữa hai lần chạy giống hệt nhau → thành luật "đừng kết luận từ 1 lần chạy" (CLAUDE.md 16) |
+| `hybrid-v2` thua baseline | **Commit nguyên vẹn kèm ADR-0009 nói vì sao không adopt.** Không xoá kết quả âm cho gọn |
 
 ---
 
 ## 8. Thứ tự khuyến nghị
 
+Ba việc đầu của bản trước **đã xong** và giữ lại ở đây để thấy thứ tự đã đi đúng:
+
+| ~~#~~ | Việc | Kết quả |
+|---|---|---|
+| ~~1~~ | `results/naive-v1.json` | ✅ baseline có thật, mọi mục dưới đây so được với nó |
+| ~~2~~ | `hybrid-v2` (BM25 + RRF) | ✅ đã đo — **thua**, ADR-0009. ROI dự đoán cao nhất hoá ra không phải |
+| ~~3~~ | Cross-encoder rerank | ✅ **thắng**, adopted và đang serve, ADR-0010 |
+
+Còn lại:
+
 | # | Việc | Vì sao |
 |---|---|---|
-| 1 | `results/naive-v1.json` | Không có baseline thì mọi thứ ở trên là lý thuyết |
-| 2 | `hybrid-v2` (BM25 + RRF) | Đã trong PLAN, ROI cao nhất |
-| 3 | Independent judge (4.21) | Rẻ nhất — biến điểm yếu thành phép đo |
-| 4 | Breadcrumb metadata (1.10) | Đánh trúng vấn đề bảng đã ghi nhận; là **1 biến duy nhất** → đúng luật Phase 6, thành `breadcrumb-v2`, đo ngay bằng harness sẵn có |
-| 5 | Prompt caching (6.1) | Giải quyết đau quota có thật |
-| 6 | Multi-query (2.9) | |
-| 7 | Agentic RAG (6.2) / MCP (6.3) | Sau Phase 6, cần ADR |
-| 8 | Docling (6.4) | Đắt nhất — cần ADR + chấp nhận re-ingest |
+| 1 | Independent judge (4.21) | Rẻ nhất — biến điểm yếu thành phép đo. **Bây giờ càng đáng làm**: `rerank-v1` thua baseline ở `refusal` và judge tự chấm nên không phân xử được |
+| 2 | Chạy lại `rerank-v1` vài lần | Không tốn code. Generation metric dao động (3.7) → hiện chưa biết chênh lệch `refusal` 1.000 vs 0.800 là thật hay nhiễu. **Cần biết trước khi làm bất cứ thí nghiệm generation nào** |
+| 3 | Breadcrumb metadata (1.10) | Đánh trúng vấn đề bảng đã ghi nhận; là **1 biến duy nhất** → đúng luật Phase 6, thành `breadcrumb-v2`, đo ngay bằng harness sẵn có |
+| 4 | Prompt caching (6.1) | |
+| 5 | Multi-query (2.9) | Lưu ý: reranker đã lấy phần lớn headroom về thứ tự; multi-query đánh vào **recall**, mà recall đang là 1.0 → khó chứng minh trên corpus này |
+| 6 | Agentic RAG (6.2) / MCP (6.3) | Sau Phase 6, cần ADR |
+| 7 | Docling (6.4) | Đắt nhất — cần ADR + chấp nhận re-ingest |
 
-> **Cảnh báo:**  **2 pipeline có số so sánh được đánh bại 8 kỹ thuật kể miệng.**
-> Danh sách dài chứng minh bạn đọc nhiều; một dòng thứ hai trong `leaderboard.md` chứng minh
-> bạn **đo được**.
+> **Cảnh báo (vẫn nguyên giá trị, chỉ đổi con số):** **3 pipeline có số so sánh được đánh bại 8
+> kỹ thuật kể miệng.** Danh sách dài chứng minh bạn đọc nhiều; ba dòng trong `leaderboard.md`
+> — trong đó **một dòng là kết quả âm được giữ lại** — chứng minh bạn **đo được**.
+
+> **Trần của corpus này.** `recall@5` đã 1.0 và MRR 0.979 trên 34 chunk. Mọi thí nghiệm
+> **retrieval** tiếp theo gần như không còn chỗ để thắng — không phải vì kỹ thuật vô dụng mà vì
+> thước đo đã hết dư địa. Muốn đo tiếp thì phải mở rộng corpus hoặc viết golden set khó hơn
+> (ADR-0004), chứ không phải thêm retriever.
