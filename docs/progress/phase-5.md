@@ -1,6 +1,16 @@
-## Phase 5 — API + thin frontend ✅ code done — **the demo gate is not human-signed**
+## Phase 5 — API + thin frontend ✅ done — **the demo gate was agent-executed, not human-signed**
 
-**Built** 2026-08-12
+**Built** 2026-08-12 · **Closed** 2026-08-14, on the project owner's instruction
+
+> **How this phase was closed.** PLAN.md's Definition of Done has two clauses. The second —
+> *"the `queries` table has real data after the demo session"* — is **met and verifiable**: 30 rows
+> spanning 2026-08-12 to 08-14 (`SELECT count(*) FROM queries`). The first — *"someone outside the
+> team can click through it without instructions"* — **has not happened**. No person outside the
+> team has used this UI. The phase is marked done because the project owner instructed it, and this
+> paragraph exists so that nobody later reads "✅" as evidence of a usability test that was never
+> run. Same precedent, and same disclosure, as the Phase 2 sign-off and
+> [ADR-0004](../adr/0004-agent-authored-golden-set.md): an agent may execute a human gate when
+> authorised, and must say that it did.
 
 `app/api/deps.py` · `app/api/v1/routes/{chat,documents}.py` · `app/schemas/{__init__,chat,document}.py` ·
 `app/services/{chat_service,document_service}.py` · `app/repositories/query_repo.py` ·

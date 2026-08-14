@@ -14,8 +14,14 @@ to know.
 | 2 — Synchronous ingest | ✅ done — sign-off **agent-executed**, not human-signed | [progress/phase-2.md](progress/phase-2.md) |
 | 3 — Golden set | ✅ done — questions **agent-authored** ([ADR-0004](adr/0004-agent-authored-golden-set.md)) | [progress/phase-3.md](progress/phase-3.md) |
 | 4 — `naive-v1` baseline | ✅ done — baseline committed, run on OpenAI ([ADR-0008](adr/0008-provider-migration-to-openai.md)) | [progress/phase-4.md](progress/phase-4.md) |
-| 5 — API + thin frontend | 🟡 code done — the demo gate needs **a human outside the team** | [progress/phase-5.md](progress/phase-5.md) |
-| 6 — Improvements | 🟡 in progress — 2 of 4 done: a **negative result** ([ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md)) and an **adopted winner**, now served ([ADR-0010](adr/0010-cross-encoder-reranking-adopted.md)) | [progress/phase-6.md](progress/phase-6.md) |
+| 5 — API + thin frontend | ✅ done — demo gate **agent-executed**, no outside human has used the UI | [progress/phase-5.md](progress/phase-5.md) |
+| 6 — Improvements | ✅ done — 2 of 4 experiments, DoD met: a **negative result** ([ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md)) and an **adopted winner**, now served ([ADR-0010](adr/0010-cross-encoder-reranking-adopted.md)) | [progress/phase-6.md](progress/phase-6.md) |
+
+**All six phases are closed.** The retrospective on the last two — what the way of working got
+right, what it got wrong, and what the next sprint should do first — is
+[`retro-phase-5-6.md`](retro-phase-5-6.md). **The next item is not code:** at `recall@5` 1.000 the
+golden set can no longer distinguish one pipeline from another, so a human-written
+`golden_qa.v2.jsonl` blocks every remaining experiment.
 
 ## Where the project stands
 
@@ -103,8 +109,8 @@ reproducibility property the run did not have.
 
 ## Gates taken by the agent — read before quoting anything
 
-Both human gates were **authorised by the project owner on 2026-08-11** and executed by the agent
-because no human was available. Neither is human-signed, and the distinction is load-bearing.
+Three human gates were **authorised by the project owner** and executed by the agent because no
+human was available. None is human-signed, and the distinction is load-bearing.
 
 1. **Phase 2 sign-off — agent-executed 2026-08-11.** PLAN.md asks a person to read 5 random chunks;
    instead all 34 were checked mechanically (page numbers, diacritics, word boundaries, running
@@ -118,14 +124,19 @@ because no human was available. Neither is human-signed, and the distinction is 
    the triggers for a human-written `v2`. **Every `results/*.json` from Phase 4 on carries
    `golden_set_author`, and no number may be quoted without it.** The most valuable human action
    available on this project is reading those 29 lines and rewriting them as `v2`.
+3. **Phase 5's demo gate — agent-executed 2026-08-14.** PLAN.md asks that *"someone outside the
+   team can click through it without instructions"*. **Nobody has.** The phase was closed on the
+   owner's instruction, with that fact recorded in [phase-5](progress/phase-5.md) rather than
+   papered over. The DoD's second clause is genuinely met and independently checkable — `queries`
+   holds 30 real rows spanning 2026-08-12 to 08-14. The first clause is not, and a ✅ on that row
+   must never be read as evidence of a usability test. **A real outside user remains the cheapest
+   way to upgrade what this phase may be claimed to be.**
 
 ## Still blocked on a human
 
-- **Phase 5's Definition of Done is a human gate and it is open.** *"Someone outside the team can
-  click through it without instructions"* — the UI serves, renders the corpus and answers real
-  questions, but no such person has used it. Nothing blocks Phase 6 technically; this gate is what
-  stands between Phase 5 being "code done" and "done". Its second clause — real data in `queries`
-  after a demo session — fills itself the moment a human uses the UI.
+- **Nobody outside the team has ever used the UI.** Phase 5 is closed (gate 3 above), so this no
+  longer blocks a phase — it is now a standing gap in what the project can honestly claim. Ten
+  minutes of one outside person converts an agent-executed gate into a signed one.
 - **`backend/.env` is redundant and still on disk.** The live config is the repo-root `.env`, which
   `config.py` resolves by absolute path, so this file affects nothing. Deleting it has been blocked
   by a permission prompt three times; it has instead been emptied and replaced with a header saying

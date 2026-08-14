@@ -1,9 +1,23 @@
-## Phase 6 — Improvements, one pipeline at a time 🟡 in progress — experiments 1–2 of 4 done
+## Phase 6 — Improvements, one pipeline at a time ✅ done — 2 of 4 experiments run, DoD met
 
 **Built** 2026-08-12 · **`hybrid-v2` run** 2026-08-12, on OpenAI
 **Experiment 2** built and run 2026-08-14 — **`rerank-v1` adopted and served**
 ([ADR-0010](../adr/0010-cross-encoder-reranking-adopted.md)); jump to
 [Experiment 2](#experiment-2--cross-encoder-reranking-adopted-and-served).
+**Closed** 2026-08-14 · retrospective: [`docs/retro-phase-5-6.md`](../retro-phase-5-6.md)
+
+> **Why 2 of 4 experiments closes this phase.** PLAN.md's Definition of Done is
+> *"`results/leaderboard.md` has ≥3 rows, and you can explain why you kept one and dropped another
+> — with numbers, not with feelings."* Both clauses are met: 3 rows (`naive-v1`, `hybrid-v2`,
+> `rerank-v1`), with [ADR-0009](../adr/0009-hybrid-retrieval-not-adopted.md) dropping hybrid and
+> [ADR-0010](../adr/0010-cross-encoder-reranking-adopted.md) adopting rerank, both on numbers. The
+> four-item list in PLAN.md is an *order to try things in*, not a completion checklist.
+>
+> The two untried experiments — chunk size and query rewriting — are **deliberately not run**
+> rather than merely skipped. `rerank-v1` scores `recall@5` **1.000** and MRR **0.979** on 24
+> agent-authored questions, so there is no retrieval headroom left to measure a third or fourth
+> pipeline against. Running them now would add rows that read 1.000 and prove nothing. They are
+> unblocked by a human-written `golden_qa.v2.jsonl`, not by more code.
 
 `app/llm/rag/retrievers/bm25.py` · `app/llm/rag/retrievers/hybrid.py` ·
 `app/llm/rag/pipelines/hybrid_v2.py` · `alembic/versions/002_gin_index_for_bm25_keyword_retrieval.py` ·
