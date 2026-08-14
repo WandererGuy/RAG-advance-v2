@@ -27,6 +27,10 @@ dependencies = [
     # Phase 5: POST /documents is a multipart upload, and FastAPI refuses to build the route
     # without this at import time.
     "python-multipart>=0.0.20",
+    # Phase 6: the Jina rerank adapter calls the HTTP API directly, because LiteLLM 1.96 does
+    # not route Jina reranking. LiteLLM pulls httpx in anyway, but it is listed here for the
+    # same reason jinja2 is: a transitive dependency is not a contract.
+    "httpx>=0.28",
 ]
 
 [project.optional-dependencies]

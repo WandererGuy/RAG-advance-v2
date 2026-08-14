@@ -55,6 +55,7 @@ original wording, [ADR-0002](docs/adr/0002-tech-stack-resolution.md) records why
 | PDF | PyMuPDF (`fitz`) — accurate page numbers required |
 | DOCX | `python-docx` |
 | Embedding | `text-embedding-3-large`, **768 dim** (native truncation), read from `.env` |
+| Rerank | `voyage/rerank-2.5-lite`, read from `.env`. Only used by pipelines that wire a `RerankingRetriever` — `rerank-v1`, which is the **served** pipeline ([ADR-0010](docs/adr/0010-cross-encoder-reranking-adopted.md)). A third vendor and a second metered key on the `/chat` path; `RERANK_PROVIDER` switches to Cohere, Jina and four others |
 | LLM | read from `.env`, currently `gpt-5.6-luna` via LiteLLM ([ADR-0008](docs/adr/0008-provider-migration-to-openai.md)). **Pinned, never a moving alias.** It rejects `temperature=0`, so `LLM_SUPPORTS_TEMPERATURE=false` and results files record `temperature: null` |
 | Prompt | Jinja2 templates in `app/llm/prompts/`, versioned filenames |
 | Frontend | Streamlit, single file (`frontend/app.py`, `make ui`) — a client of the API, holding no logic. An optional `frontend` extra, so the API deploys without it |
@@ -129,8 +130,10 @@ routes/  →  services/  →  repositories/  →  models/
 **4.3. The retriever is an interface.**
 `retrievers/base.py` defines the protocol; `dense.py`, `bm25.py`, `hybrid.py`, `reranker.py`
 are implementations. The pipeline receives a retriever through its constructor; it does not
-instantiate one itself. `dense.py` (Phase 4), `bm25.py` and `hybrid.py` (Phase 6) exist;
-`reranker.py` does not yet.
+instantiate one itself. `dense.py` (Phase 4), `bm25.py`, `hybrid.py` and `reranker.py` (Phase 6)
+all exist. `reranker.py` wraps another retriever rather than querying storage: it widens the base
+retriever to `RERANK_TOP_N` candidates and reorders them through `rerankers/`, so it satisfies the
+same protocol and composes with any retriever below it.
 
 **Retrieval scores are per-retriever and never comparable across retrievers.** A cosine similarity
 and a `ts_rank_cd` share no scale; `RetrievedChunk.score` means whatever the retriever that

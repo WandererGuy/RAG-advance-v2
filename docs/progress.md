@@ -15,7 +15,7 @@ to know.
 | 3 — Golden set | ✅ done — questions **agent-authored** ([ADR-0004](adr/0004-agent-authored-golden-set.md)) | [progress/phase-3.md](progress/phase-3.md) |
 | 4 — `naive-v1` baseline | ✅ done — baseline committed, run on OpenAI ([ADR-0008](adr/0008-provider-migration-to-openai.md)) | [progress/phase-4.md](progress/phase-4.md) |
 | 5 — API + thin frontend | 🟡 code done — the demo gate needs **a human outside the team** | [progress/phase-5.md](progress/phase-5.md) |
-| 6 — Improvements | 🟡 in progress — experiment 1 of 4 done, a **negative result** ([ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md)) | [progress/phase-6.md](progress/phase-6.md) |
+| 6 — Improvements | 🟡 in progress — 2 of 4 done: a **negative result** ([ADR-0009](adr/0009-hybrid-retrieval-not-adopted.md)) and an **adopted winner**, now served ([ADR-0010](adr/0010-cross-encoder-reranking-adopted.md)) | [progress/phase-6.md](progress/phase-6.md) |
 
 ## Where the project stands
 
@@ -64,6 +64,25 @@ and is faster (p50 1611 ms vs 2009 ms). Only 6 of 24 answerable questions change
 committed, because a negative result is information. PLAN.md predicted hybrid would be the biggest
 win available — on 8 synthetic HR documents with no part numbers or reference codes, there was
 nothing for the keyword half to catch that dense was missing.
+
+**Phase 6's second experiment is the project's first win, and it is now the served pipeline.**
+`rerank-v1` — dense widened to 20 candidates, reordered by `voyage/rerank-2.5-lite` down to 5 —
+improves **every** retrieval metric and regresses none: `recall@5` 0.958 → **1.000**, MRR 0.840 →
+**0.979**, nDCG@5 0.857 → **0.970**, at +65 ms p50. Run twice, retrieval byte-identical both times.
+Of 24 answerable questions **6 improved and 0 degraded**, which is the structural difference from
+hybrid: RRF re-scores a merged list and can push a relevant chunk out of the top 5, while a
+reranker only reorders what dense already found. `PIPELINE_NAME=rerank-v1`
+([ADR-0010](adr/0010-cross-encoder-reranking-adopted.md)), which adds Voyage as a third vendor and
+a second metered key on the served path.
+
+**Its one regression, `refusal_accuracy` 0.800, is the detector and not the retrieval.** Two runs
+scored 0.6 and 0.8; per-question, `q029` flipped between runs while **`q025` failed in both**. That
+answer states the documents do not contain the figure, cites two real adjacent facts, invents
+nothing, and was scored faithfulness 5.0 — it is a hallucination only because `is_refusal()`
+matches one exact sentence (ADR-0006). Better retrieval *caused* it: an unanswerable question has
+no correct chunk, so a reranker surfaces the most adjacent material, which is what invites a hedge.
+**The hedging blind spot now reproduces on demand**, which turns the standing human decision below
+from a judgement call into one with a test case attached.
 
 **The most transferable thing Phase 6 learned: generation metrics do not reproduce between runs.**
 `hybrid-v2` was run twice on identical code and an identical corpus. Retrieval came out
@@ -115,6 +134,15 @@ because no human was available. Neither is human-signed, and the distinction is 
 - **Decide what to do about the refusal contract** — whether it should accept a
   hedge that names its own uncertainty, or whether the prompt should forbid hedging outright. That
   is a judgement about what employees should see, not a technical fix, and it belongs to a human.
+  **It now has a reproducible test case and a cost.** `q025` under `rerank-v1` fails in both runs
+  with an answer that refuses correctly, cites correctly and invents nothing (faithfulness 5.0). It
+  is the only metric on which the newly-served pipeline does not beat the baseline, so this
+  decision is now what stands between `rerank-v1` and a clean sweep
+  ([ADR-0010](adr/0010-cross-encoder-reranking-adopted.md)).
+- **Rewriting the golden set has gone from valuable to blocking.** `rerank-v1` scores `recall@5`
+  1.000 and MRR 0.979 on 24 paraphrase-derived questions over 34 chunks. There is no retrieval
+  headroom left to measure experiments 3 and 4 against — the dataset has stopped discriminating
+  between pipelines, and only a human-written `v2` restores that (ADR-0004, ADR-0010).
 
 ## Carried-over open items
 
@@ -135,12 +163,19 @@ Full detail in each phase entry; these are the ones that will bite a later phase
   **no `force` parameter**, so it cannot reassign the chunk ids of existing documents;
   `make ingest FORCE=1` at a terminal still can.
   ([phase-5](progress/phase-5.md), [phase-6](progress/phase-6.md))
-- **`hybrid-v2` is frozen too**, now that its results file is committed: `hybrid_v2.py`,
-  `bm25.py` and `hybrid.py` must not be edited. A weighted-RRF variant is `hybrid-w-v3`, a new
-  file. ([phase-6](progress/phase-6.md))
+- **`hybrid-v2` and `rerank-v1` are frozen too**, now that their results files are committed:
+  `hybrid_v2.py`, `bm25.py`, `hybrid.py`, `rerank_v1.py`, `reranker.py` and `rerankers/` must not be
+  edited. A weighted-RRF variant is `hybrid-w-v3`; a different `RERANK_TOP_N`, reranker model, or
+  reranking over hybrid candidates is another new name. ([phase-6](progress/phase-6.md))
+- **An empty `RERANK_API_KEY` fails per-request, not at startup.** With `PIPELINE_NAME=rerank-v1`
+  the Voyage path builds cleanly and raises `RerankFailed` at the first `/chat` call — LiteLLM gets
+  `api_key=None`, and only the Jina adapter validates its key in the constructor. A deployment that
+  forgets the key starts healthy and fails on every request. The frozen code path means the fix
+  belongs to whoever next opens it. ([phase-6](progress/phase-6.md))
 - **The API has no auth, no permissions and no rate limit**, which is in scope for v1 but means
-  every `/chat` call spends a metered key. Do not expose it beyond a laptop or a trusted network.
-  ([phase-5](progress/phase-5.md))
+  every `/chat` call spends a metered key — **two of them now**, OpenAI and Voyage, since
+  `rerank-v1` is served. Do not expose it beyond a laptop or a trusted network.
+  ([phase-5](progress/phase-5.md), [phase-6](progress/phase-6.md))
 - **Chunk ids are reassigned by any `--force` re-ingest**, which invalidates the golden set's
   `relevant_chunk_ids`. Now caught rather than prevented: the corpus is frozen in
   `eval/datasets/corpus.lock.json` and `make validate` fails loudly, naming what happened

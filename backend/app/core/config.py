@@ -56,6 +56,25 @@ class Settings(BaseSettings):
     embedding_api_key: str = ""
     embedding_dimensions: int = 768
 
+    # --- Reranking (Phase 6). Only used by pipelines that wire a RerankingRetriever. ---
+    rerank_provider: str = Field(
+        default="VOYAGE",
+        description=(
+            "voyage (default) and cohere, together_ai, deepinfra, fireworks_ai, watsonx go "
+            "through LiteLLM's arerank; jina takes a direct HTTPS adapter because LiteLLM "
+            "1.96 does not route it."
+        ),
+    )
+    rerank_model_name: str = "rerank-2.5-lite"
+    rerank_api_key: str = ""
+    rerank_top_n: int = Field(
+        default=20,
+        description=(
+            "How many candidates the base retriever hands the reranker. The pipeline still "
+            "answers from top_k; this is the width of the list being reordered."
+        ),
+    )
+
     # --- Pipeline defaults, frozen until Phase 6 (CLAUDE.md 5.3) ---
     pipeline_name: str = "naive-v1"
     chunk_size: int = 800
@@ -72,6 +91,11 @@ class Settings(BaseSettings):
     def embedding_model(self) -> str:
         """LiteLLM model identifier for embeddings."""
         return f"{self.embedding_provider.lower()}/{self.embedding_model_name}"
+
+    @property
+    def rerank_model(self) -> str:
+        """Provider-qualified rerank model, e.g. "voyage/rerank-2.5-lite"."""
+        return f"{self.rerank_provider.lower()}/{self.rerank_model_name}"
 
     def pipeline_config(self, **overrides: Any) -> PipelineConfig:
         """Build the default PipelineConfig, with per-pipeline overrides applied."""
@@ -109,6 +133,12 @@ class PipelineConfig:
     # the run used the provider's default (ADR-0008). Never write 0.0 here to mean "we tried".
     temperature: float | None
     prompt_version: str
+    # None for a pipeline with no second stage — which is what naive-v1 and hybrid-v2 are, and
+    # why this defaults rather than being required: adding the field must not change what those
+    # two frozen pipelines report. A reranking pipeline records the provider-qualified model
+    # and how many candidates it reordered, because a rerank score is meaningless without both.
+    reranker: str | None = None
+    rerank_top_n: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize for results/*.json."""
