@@ -3,7 +3,7 @@
 Phần này **chỉ chứa những gì file `6_ky_thuat_rag_chatbot.md` chưa có**. Mọi mục trùng đã được
 lược bỏ và ghi lại ở mục 0 để không phải đọc chéo hai file.
 
-Trạng thái tính đến 2026-08-12, commit `14880f9`. Ký hiệu giữ nguyên như file 6
+Trạng thái tính đến 2026-08-14, commit `a7727e5`, **Phase 0–6 xong**. Ký hiệu giữ nguyên như file 6
 (✅ đã có code · 📋 đã trong PLAN Phase 6 · 💡 ý tưởng mới · ⚠️ có nhưng không như tên gọi).
 
 Ý tưởng mới của Mạnh `=))`
@@ -24,8 +24,8 @@ Trạng thái tính đến 2026-08-12, commit `14880f9`. Ký hiệu giữ nguyê
 
 | Ý trong suggestion | Đã nằm ở đâu trong file 6 |
 |---|---|
-| Thêm reranker | 2.7 📋 |
-| Rewrite user query | 2.8 📋 |
+| Thêm reranker | 2.7 ✅ — **đã làm và đã adopt**, `rerank-v1` là pipeline đang serve (ADR-0010) |
+| Rewrite user query | 2.8 📋 — vẫn chưa làm |
 | Phân rã query, chạy song song | 2.9 💡 (multi-query + RRF) |
 | Agentic RAG, retriever as a tool | 6.2 💡 |
 | MCP server, đọc tài liệu là 1 tool | 6.3 💡 |
@@ -53,14 +53,19 @@ Hiện tại `dense.py` luôn trả top-5 bất kể câu hỏi có liên quan c
 phải nói gì đó, và refusal hoàn toàn phụ thuộc prompt (lớp 3) — tức là phụ thuộc thiện chí của
 model. Gate là lớp **không gọi LLM**: không sinh thì không bịa.
 
+Hình dạng đúng với repo hiện tại: `reranker.py` đã bọc một retriever khác và trả về top-k đã
+reorder — gate là một lớp bọc nữa ở ngoài cùng, đúng cùng Protocol:
+
 ```python
-def retrieve_with_gate(query, k=5, min_score=0.35):
-    hits = hybrid_search(query, k=30)
-    hits = rerank(query, hits)[:k]
+def retrieve_with_gate(query, k=5, min_score=...):
+    hits = reranking_retriever.retrieve(query, k)   # dense top-20 -> rerank -> top-5
     if not hits or hits[0].score < min_score:
         return None            # -> refusal, KHÔNG gọi LLM
     return [h for h in hits if h.score >= min_score]
 ```
+
+`min_score` để trống có chủ ý: nó phải chọn từ dữ liệu (xem hàng "Cách chọn ngưỡng"), và trên
+thang cross-encoder chứ không phải cosine.
 
 | | |
 |---|---|
@@ -68,9 +73,17 @@ def retrieve_with_gate(query, k=5, min_score=0.35):
 | Cách chọn ngưỡng | Chạy eval, vẽ phân bố `ChunkHit.score` của 24 câu có đáp án vs 5 câu unanswerable, chọn điểm cắt, **ghi con số + lý do vào ADR** |
 | Rủi ro | Ngưỡng quá cao → `over_refusal_rate` tăng. Repo **đã có sẵn metric đó** (4.8) → đo được ngay hai chiều, không phải đánh đổi mù |
 | Chi phí | Thấp. 1 tham số config → 1 pipeline mới `gate-v2` → đúng luật "1 thí nghiệm = 1 biến" |
-| Cạm bẫy | `ChunkHit.score` là cosine, `RetrievedChunk.score` là "bất kỳ thứ gì retriever rank theo" (2.4). Ngưỡng gate chỉ có nghĩa trên **cosine**; sang `hybrid-v2` với RRF thì phải **hiệu chỉnh lại**, không bê nguyên `0.35` |
+| Cạm bẫy | `ChunkHit.score` là cosine, `RetrievedChunk.score` là "bất kỳ thứ gì retriever rank theo" (2.4). Ngưỡng gate chỉ có nghĩa **trên đúng thang của retriever đang chạy**. Pipeline đang serve là `rerank-v1` → score cuối là **điểm cross-encoder của Voyage**, không phải cosine và cũng không phải RRF. Ba thang khác nhau, `0.35` không bê được từ thang này sang thang kia |
 
 **Đây là lớp phòng thủ duy nhất trong 4 lớp mà repo hiện chưa có gì cả.**
+
+**Cập nhật sau Phase 6 — điều kiện chọn ngưỡng đã tốt lên:** cross-encoder score có ý nghĩa
+tuyệt đối hơn cosine (nó chấm trực tiếp cặp *câu hỏi × chunk* thay vì khoảng cách hai vector độc
+lập), nên phân bố "có đáp án" vs "unanswerable" tách bạch hơn → chọn điểm cắt dễ hơn so với thời
+điểm viết mục này. Nhưng cũng cẩn thận hơn về **cái đang đo**: baseline `refusal_accuracy` hiện
+là 1.000 (`naive-v1`) và 0.800 (`rerank-v1`), và metric này **không tái lập được giữa các lần
+chạy** (file 6 mục 3.7). Muốn chứng minh gate có tác dụng thì phải chạy nhiều lần và so phân bố,
+chứ không so hai con số đơn lẻ.
 
 ### 1.2 Đánh số citation ngay trong context 💡
 
@@ -105,7 +118,7 @@ Bắt model trả JSON thay vì văn xuôi:
 |---|---|
 | Giá trị | `sufficient: false` là **tín hiệu từ chối có cấu trúc**, không phải string-match câu từ chối |
 | Va chạm | 3.3 nói refusal là **constant** và `is_refusal()` match đúng constant đó. Chuyển sang JSON thì `is_refusal()` phải đổi định nghĩa → **đụng metric `refusal_accuracy` (4.6) đang là số safety-critical deterministic**. Phải ghi ADR, không lặng lẽ đổi |
-| Khuyến nghị | Làm **sau** khi có `results/naive-v1.json`, để `refusal_accuracy` cũ có baseline mà so |
+| Khuyến nghị | Baseline đã có (3 cái). Nhưng điều kiện thật sự chưa đủ: `refusal_accuracy` **dao động giữa các lần chạy** (file 6 mục 3.7), nên phải có **phân bố nhiều lần chạy** làm mốc trước, không phải một con số |
 | ⚠️ | `confidence` do model tự khai là **self-reported**, gần như vô nghĩa nếu không calibrate. Ghi nó ra results file thì được; dùng nó để chặn/không chặn thì phải chứng minh bằng số |
 
 ### 1.4 Quy tắc prompt còn thiếu 💡 — rẻ nhất, làm được ngay
@@ -163,14 +176,16 @@ và "đánh giá chất lượng" thành hai gạch đầu dòng, mà trình bà
 
 ## 2. Vận hành & API — nhóm hoàn toàn mới, file 6 không có mục nào
 
-File 6 dừng ở "Phase 5 chưa có API chat / UI". Suggestion cụ thể hoá Phase 5 thành yêu cầu kỹ thuật.
+**Phase 5 đã xong** — `POST /chat`, `POST /documents`, `GET /documents`, `GET /health`, và UI
+Streamlit (`frontend/app.py`, `make ui`) là client thuần của API. Mục này giữ lại vì phần lớn
+vẫn là việc chưa làm; các dòng đã làm được đánh dấu lại.
 
 | # | Kỹ thuật | TT | Chi tiết |
 |---|---|---|---|
-| 2.1 | **Chat là API streaming** (SSE) | 💡 | Đổi contract Phase 5. Kéo theo `time_to_first_token` — một metric mà eval batch hiện tại **không đo được** |
-| 2.2 | **Ingest là API + polling progress** | 💡 | **Va chạm trực tiếp CLAUDE.md**: v1 chốt "synchronous ingest", `app/workers/` khoá đến sau Phase 6. Làm async ingest = mở khoá workers = **cần ADR**. Trung gian rẻ: giữ sync nhưng thêm endpoint `GET /documents/{id}` đọc `status` + `error_message` — hai cột **đã có sẵn** trong schema từ 1.6 |
-| 2.3 | **API resolve citation** `GET /chunks/{id}` | 💡 | Frontend render `[1]` bấm được → hiện chunk text + tên document + số trang. Bắt buộc nếu làm 1.2 |
-| 2.4 | Cho người dùng upload tài liệu để test | 💡 | Mở corpus cho user = **phá `corpus.lock.json` (ADR-0005)**. Cách thoát: tách **corpus eval (frozen)** khỏi **corpus user (mutable)**, hai search space riêng — trùng với ý "cô lập tài liệu" ở 3.3 |
+| 2.1 | **Chat là API streaming** (SSE) | 💡 | Vẫn chưa làm — `POST /chat` hiện trả **một response đầy đủ**. Kéo theo `time_to_first_token`, metric mà eval batch **không đo được**. Đây vẫn là thay đổi contract |
+| 2.2 | **Ingest là API + polling progress** | ⚠️ một phần | `POST /documents` **đã có**, và cố tình **giữ synchronous** — request mở đến khi embed xong. `GET /documents` trả `status` + `chunk_count` cho mọi document. Phần **chưa** có là progress theo thời gian thực của một lần upload đang chạy; cái đó mới cần `app/workers/` và **cần ADR** (ADR-0002 đã bác Celery+Redis) |
+| 2.3 | **API resolve citation** `GET /chunks/{id}` | ⚠️ đã giải quyết theo cách khác | Không cần endpoint riêng: `POST /chat` trả citation **kèm sẵn** `filename`, `page_no`, `chunk_id` và `snippet`, UI expand ra đọc được ngay. Chỉ cần endpoint riêng nếu làm 1.2 (đánh số `[1]` và trả về số trần) |
+| 2.4 | Cho người dùng upload tài liệu để test | ⚠️ đã làm, theo cách rẻ hơn | Upload **đã mở** qua `POST /documents`. Va chạm với ADR-0005 được xử lý không phải bằng cách tách hai search space, mà bằng ba thứ: (a) endpoint **không có tham số `force`** nên không bao giờ đánh lại chunk id, (b) upload trùng bytes là no-op (`status="skipped"`), (c) upload vẫn là đổi corpus → **luật là chạy `make validate` sau mỗi phiên upload**. Tách corpus eval/user (3.4) vẫn là lời giải đúng nếu sau này có nhiều người dùng thật |
 | 2.5 | `max_recursive` / `max_loop` cho agentic | 💡 | Điều kiện tiên quyết của 6.2. Không có nó, agentic loop tiêu quota vô hạn — repo **đã đau vì quota** (7.3) |
 
 ---
@@ -179,7 +194,7 @@ File 6 dừng ở "Phase 5 chưa có API chat / UI". Suggestion cụ thể hoá 
 
 | # | Kỹ thuật | TT | Chi tiết |
 |---|---|---|---|
-| 3.1 | Citation `[1]` bấm được → gọi API xem chunk | 💡 | Cùng cặp với 1.2 + 2.3. Đây là **cách chứng minh trực quan nhất** rằng citation có thật — người xem tự bấm và kiểm chứng |
+| 3.1 | Citation `[1]` bấm được → xem chunk | ⚠️ đã có bản tương đương | UI Streamlit **đã** render mỗi citation thành một khối expand được: tên file, số trang, `chunk_id` và snippet gốc — người xem tự mở ra kiểm chứng. Khác bản đề xuất ở chỗ dữ liệu đi kèm response chứ không gọi API thứ hai (2.3). UI cũng **hiện riêng citation `supported=false`**, tức là phần hệ thống tự khai mình trích sai |
 | 3.2 | Follow-up question bấm được | 💡 | Gợi ý 3 câu tiếp theo. **Cần multi-turn → sau Phase 6** (`llm/memory.py` đang khoá) |
 | 3.3 | Selection để user xác nhận / bổ sung dữ kiện | 💡 | Khi query mơ hồ hoặc thiếu dữ kiện, model hỏi lại bằng **lựa chọn bấm được** thay vì text tự do. Cùng họ với 2.8 query rewriting nhưng có human-in-the-loop |
 | 3.4 | Cô lập tài liệu bằng search-space table hoặc ACI | 💡 | Nền móng cho permissions. **ADR-0001 chốt v1 không có permissions** — nhưng cột `search_space` trong schema là chi phí thấp *nếu thêm ngay từ đầu*, đắt nếu thêm sau. Xem 2.4 |
@@ -255,31 +270,35 @@ trung bình ≥ 4.0 và `over_refusal_rate` ≤ 15%".
 
 | | |
 |---|---|
-| Việc cần làm | Sau khi có `results/naive-v1.json`, chốt ngưỡng chấp nhận cho từng metric và ghi vào ADR |
+| Việc cần làm | **Điều kiện đã đủ** — có 3 results file. Chốt ngưỡng chấp nhận cho từng metric và ghi vào ADR |
 | Vì sao phải sau baseline | Đặt ngưỡng **trước khi biết baseline** là bịa số. Đặt sau baseline mà không ghi ngày thì thành *"chọn ngưỡng vừa đủ để mình pass"* — nên **ghi rõ ngày chốt và giá trị baseline tại thời điểm đó** |
+| Đặt thế nào cho đúng | Ngưỡng **retrieval** đặt được ngay (deterministic): ví dụ recall@5 ≥ 0.95, MRR ≥ 0.90. Ngưỡng **generation** thì không được đặt bằng một lần chạy — với `refusal_accuracy` từng cho 0.8 rồi 1.0 trên cùng code, một ngưỡng "≥ 0.9" sẽ fail CI ngẫu nhiên. Hoặc đặt ngưỡng trên **trung vị nhiều lần chạy**, hoặc đặt rộng và chấp nhận nó chỉ bắt được sự cố lớn |
 | Ăn khớp | Ngưỡng chính là điều kiện `.github/workflows/eval.yml` (4.30) sẽ fail CI |
 
 ---
 
 ## 8. Thứ tự khuyến nghị — bản gộp với file 6
 
-File 6 mục 8 xếp 8 việc. Chèn các mục mới vào, giữ nguyên nguyên tắc *"2 pipeline có số so sánh
-được đánh bại 8 kỹ thuật kể miệng"*:
+Đã xong kể từ bản trước: baseline (`naive-v1`), `hybrid-v2`, cross-encoder rerank, và Phase 5
+(API + UI). Danh sách còn lại, xếp lại theo tình hình hiện tại:
 
 | # | Việc | Nguồn | Vì sao ở vị trí này |
 |---|---|---|---|
-| 1 | `results/naive-v1.json` | file 6 | Không đổi. Không có baseline thì mọi thứ dưới đây là lý thuyết |
-| 2 | **Post-check 4c — số liệu không có trong nguồn** | 1.5 | ~20 dòng regex, **không cần thêm API call nào**, thêm được 1 metric mới. Rẻ nhất trong cả hai file |
-| 3 | **Quy tắc prompt còn thiếu + few-shot refusal** | 1.4 | 1 file `answer_v2.jinja`, đo bằng harness sẵn có |
-| 4 | `hybrid-v2` (BM25 + RRF) | file 6 | Không đổi — ROI cao nhất về chất lượng |
-| 5 | **Retrieval gate** | 1.1 | Lớp phòng thủ duy nhất repo chưa có gì. Ngưỡng chọn từ 5 câu unanswerable sẵn có |
-| 6 | Independent judge | file 6 4.21 | Không đổi |
-| 7 | **Cache embedding query bằng Redis** | 6 | Giảm đau quota có thật, độc lập mọi thứ khác |
-| 8 | Breadcrumb metadata | file 6 1.10 | Không đổi — và **1.2 (đánh số citation) nên làm cùng lúc**, chung dữ liệu |
-| 9 | **API streaming + citation resolve API** | 2.1, 2.3 | Phase 5. Đây là thứ **demo được**, khác mọi mục trên |
-| 10 | **Observability sản phẩm + dashboard** | mục 4 | Chỉ có nghĩa khi đã có traffic thật từ mục 9 |
-| 11 | Structured output JSON | 1.3 | Sau baseline, vì đụng `refusal_accuracy` |
-| 12 | Prompt caching · Multi-query · Agentic RAG · MCP · Docling | file 6 | Không đổi, giữ cuối |
+| 1 | **Chạy lại `rerank-v1` nhiều lần** | file 6 3.7 | Không tốn code. Chưa biết `refusal` 0.800 là thật hay nhiễu, mà **mọi mục generation bên dưới đều đo bằng chính metric đó**. Làm trước, nếu không thì các thí nghiệm sau không đọc được |
+| 2 | **Post-check 4c — số liệu không có trong nguồn** | 1.5 | ~20 dòng regex, **không cần thêm API call nào**, thêm được 1 metric mới. Vẫn rẻ nhất trong cả hai file |
+| 3 | **Quy tắc prompt còn thiếu + few-shot refusal** | 1.4 | 1 file `answer_v2.jinja`, đo bằng harness sẵn có. **Đáng làm hơn trước**: retrieval đã kịch trần (recall@5 = 1.0), nên chỗ còn cải thiện được nằm ở nửa generation |
+| 4 | **Retrieval gate** | 1.1 | Lớp phòng thủ duy nhất repo chưa có gì. Ngưỡng chọn trên **thang cross-encoder**, không phải cosine |
+| 5 | Independent judge | file 6 4.21 | Càng đáng làm sau ADR-0010: judge tự chấm nên không phân xử được chênh lệch generation giữa 3 pipeline |
+| 6 | **Cache embedding query bằng Redis** | 6 | Độc lập mọi thứ khác. Lưu ý: đau quota đã đỡ nhiều sau khi rời free tier (ADR-0008), nên lý do bây giờ là **latency và chi phí**, không còn là "bị chặn" |
+| 7 | Breadcrumb metadata | file 6 1.10 | Không đổi — và **1.2 (đánh số citation) nên làm cùng lúc**, chung dữ liệu |
+| 8 | **API streaming** | 2.1 | Phase 5 đã có API + UI, nhưng chưa streaming. Đây là thứ cải thiện cảm nhận demo rõ nhất |
+| 9 | **Observability sản phẩm + dashboard** | mục 4 | Chỉ có nghĩa khi đã có traffic thật |
+| 10 | Structured output JSON | 1.3 | Đụng `refusal_accuracy`; và bây giờ đụng **3 baseline** chứ không phải 1 |
+| 11 | Prompt caching · Multi-query · Agentic RAG · MCP · Docling | file 6 | Không đổi, giữ cuối |
+
+> **Nhắc lại cảnh báo trần corpus (file 6 mục 8):** recall@5 = 1.0 trên 34 chunk nghĩa là thước
+> đo retrieval đã hết dư địa. Vì vậy danh sách này cố ý **không còn mục retrieval nào ở đầu** —
+> việc đáng giá tiếp theo là làm phép đo tốt lên (mục 1, 5) và vá nửa generation (2, 3, 4).
 
 ---
 
@@ -289,23 +308,27 @@ Tổng hợp mọi chỗ suggestion đụng vào quyết định đã chốt c�
 
 | Ý tưởng | Va chạm với | Hệ quả |
 |---|---|---|
-| Ingest async + polling (2.2) | CLAUDE.md: "synchronous ingest", `app/workers/` khoá sau Phase 6; ADR-0002 bác Celery+Redis | ADR mới |
-| User upload tài liệu (2.4) | ADR-0005 `corpus.lock.json` | Tách corpus eval / corpus user |
-| Structured output JSON (1.3) | 3.3 refusal constant → `is_refusal()` → `refusal_accuracy` (4.6, safety-critical) | ADR mới, làm sau baseline |
+| Ingest async + polling (2.2) | CLAUDE.md: "synchronous ingest", `app/workers/` khoá sau Phase 6; ADR-0002 bác Celery+Redis | ADR mới. **Vẫn còn nguyên** — phần sync đã làm không mở khoá được phần async |
+| ~~User upload tài liệu (2.4)~~ | ~~ADR-0005~~ | ✅ **đã giải quyết** — bỏ `force` khỏi HTTP + skip bytes trùng + `make validate` sau upload. Không cần tách hai corpus ở quy mô hiện tại |
+| Structured output JSON (1.3) | 3.3 refusal constant → `is_refusal()` → `refusal_accuracy` (4.6, safety-critical) | ADR mới. Bây giờ đụng **3 results file đã đóng băng**, không phải 1 |
 | DeepEval thay judge (mục 5) | 4.27 provenance, ADR-0006 | Chạy song song, đừng thay |
-| Search space / ACI (3.4) | ADR-0001 "no permissions in v1" | Thêm cột sớm thì rẻ, sau thì đắt |
+| Search space / ACI (3.4) | ADR-0001 "no permissions in v1" | Thêm cột sớm thì rẻ, sau thì đắt. **Đã qua điểm rẻ** — schema đã chạy và đã có dữ liệu |
 | OCR / Docling | ADR-0001 out of scope + re-ingest phá chunk id | Đã ghi ở file 6 mục 6.4 |
-| Follow-up question (3.2) | `llm/memory.py` khoá đến sau Phase 6 | Sau Phase 6 |
-| Retrieval gate ngưỡng cosine (1.1) | 2.4 — RRF score ≠ cosine | Hiệu chỉnh lại ngưỡng khi sang `hybrid-v2` |
+| Follow-up question (3.2) | `llm/memory.py` khoá đến sau Phase 6 | **Phase 6 đã xong** → khoá đã mở về mặt luật, nhưng vẫn cần ADR vì phá giả định "single-turn" của v1 |
+| Retrieval gate — chọn ngưỡng (1.1) | 2.4 — mỗi retriever một thang score | Pipeline serve là `rerank-v1` → ngưỡng đặt trên **điểm cross-encoder**. Đổi pipeline là phải hiệu chỉnh lại |
+| **Thêm vendor thứ 3 (Voyage)** | ADR-0008 vừa gom stack về OpenAI | ✅ đã ghi — ADR-0010 sửa đổi ADR-0008. Hệ quả kể được: `/chat` giờ phụ thuộc **2 key có tính phí của 2 nhà cung cấp**, một điểm hỏng nữa |
 
 ---
 
 ## 10. Một câu tóm tắt
 
 Suggestion đóng góp ba thứ file 6 không có: **(a)** lớp retrieval gate và post-check số liệu —
-hai lớp chống hallucination rẻ và chưa làm; **(b)** toàn bộ nhóm API/UX/streaming, tức là hình
-dạng cụ thể của Phase 5; **(c)** observability sản phẩm như một loại đo **khác** eval offline.
-Phần còn lại của suggestion trùng với file 6 và đã liệt kê ở mục 0.
+hai lớp chống hallucination rẻ và **vẫn chưa làm**; **(b)** toàn bộ nhóm API/UX/streaming — Phase 5
+đã lấy phần API + UI + citation xem được, còn lại streaming và observability; **(c)** observability
+sản phẩm như một loại đo **khác** eval offline. Phần còn lại trùng với file 6, liệt kê ở mục 0.
 
-Cảnh báo của file 6 vẫn nguyên giá trị: danh sách này dài thêm không thay thế được
-`results/naive-v1.json` và dòng thứ hai trong `leaderboard.md`.
+Cảnh báo của file 6 đổi nội dung nhưng không đổi tinh thần. `leaderboard.md` giờ có **3 dòng, một
+trong đó là kết quả âm được giữ lại kèm ADR** — phần "chứng minh đo được" coi như xong. Điều cần
+cảnh giác bây giờ ngược lại: `recall@5` đã 1.0 nên **thước đo hết dư địa trước khi kỹ thuật hết ý
+tưởng**. Thêm một retriever nữa sẽ không cho thêm con số nào đọc được; việc đáng làm là làm phép
+đo tốt lên — judge độc lập, chạy nhiều lần, golden set khó hơn do người viết.
