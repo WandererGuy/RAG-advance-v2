@@ -18,12 +18,14 @@ from app.llm.rag.pipelines.base import (
 from app.llm.rag.pipelines.hybrid_v2 import HybridV2
 from app.llm.rag.pipelines.naive_v1 import NaiveV1
 from app.llm.rag.pipelines.registry import available, build_pipeline, get_pipeline, register
+from app.llm.rag.pipelines.rerank_v1 import RerankV1
 
 __all__ = [
     "REFUSAL_MARKER",
     "Citation",
     "HybridV2",
     "NaiveV1",
+    "RerankV1",
     "RAGAnswer",
     "RAGPipeline",
     "available",
