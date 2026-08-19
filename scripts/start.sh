@@ -9,7 +9,13 @@ cd "$ROOT"
 
 RUN_DIR="$ROOT/.run"
 API_PORT="${API_PORT:-8000}"
-UI_PORT="${UI_PORT:-8501}"
+# staging runs the UI on 8080 so it doesn't collide with another branch's checkout
+# on the same box; everywhere else keeps Streamlit's usual 8501.(staging ec2 instance dont have inbound allow port 8501)
+DEFAULT_UI_PORT=8501
+if [[ "$(git -C "$ROOT" branch --show-current 2>/dev/null)" == "staging" ]]; then
+  DEFAULT_UI_PORT=8080
+fi
+UI_PORT="${UI_PORT:-$DEFAULT_UI_PORT}"
 HEALTH="http://127.0.0.1:$API_PORT/api/v1/health"
 
 stop() {
